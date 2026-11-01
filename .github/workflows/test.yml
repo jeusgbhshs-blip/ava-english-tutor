@@ -1,0 +1,28 @@
+name: Ava tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ava-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      # The application has no npm dependencies; no npm install / secrets are required.
+      - run: npm run check
+      - run: npm test
+      - run: npm run test:e2e
+      # Real provider audio, macOS Vision OCR, and browser UI are separate acceptance gates.

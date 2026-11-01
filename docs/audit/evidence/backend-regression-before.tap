@@ -1,0 +1,215 @@
+TAP version 13
+# Subtest: malformed Host returns 400 and the same server remains healthy
+not ok 1 - malformed Host returns 400 and the same server remains healthy
+  ---
+  duration_ms: 161.522424
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:119:1'
+  failureType: 'testCodeFailure'
+  error: 'socket hang up'
+  code: 'ECONNRESET'
+  stack: |-
+    Socket.socketOnEnd (node:_http_client:798:25)
+    Socket.emit (node:events:526:24)
+    endReadableNT (node:internal/streams/readable:1783:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+  ...
+# Subtest: --open keeps the server alive when no browser launcher is installed
+not ok 2 - --open keeps the server alive when no browser launcher is installed
+  ---
+  duration_ms: 208.389922
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:126:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    node:events:505
+        throw er; // Unhandled 'error' event
+        ^
+    
+    Error: spawn open ENOENT
+        at ChildProcess._handle.onexit (node:internal/child_process:316:19)
+        at onErrorNT (node:internal/child_process:554:16)
+        at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+    Emitted 'error' event on ChildProcess instance at:
+        at ChildProcess._handle.onexit (node:internal/child_process:322:12)
+        at onErrorNT (node:internal/child_process:554:16)
+        at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+      errno: -2,
+      code: 'ENOENT',
+      syscall: 'spawn open',
+      path: 'open',
+      spawnargs: [ 'http://127.0.0.1:38879' ]
+    }
+    
+    Node.js v24.22.1
+    
+    
+    1 !== null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    ChildProcess._handle.onexit (node:internal/child_process:316:19)
+    onErrorNT (node:internal/child_process:554:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+    ChildProcess._handle.onexit (node:internal/child_process:322:12)
+    onErrorNT (node:internal/child_process:554:16)
+    process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    TestContext.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:130:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: text connection test binds stored keys to the configured origin
+not ok 3 - text connection test binds stored keys to the configured origin
+  ---
+  duration_ms: 178.51464
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:134:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:140:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: saving a new text origin requires a new key or explicit clear, closing the PUT then test bypass
+not ok 4 - saving a new text origin requires a new key or explicit clear, closing the PUT then test bypass
+  ---
+  duration_ms: 123.625209
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:154:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:160:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: voice connection test requires explicit credentials for a different origin and drops stored alternatives
+not ok 5 - voice connection test requires explicit credentials for a different origin and drops stored alternatives
+  ---
+  duration_ms: 388.075078
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:182:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:190:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: saving a new voice origin never carries an old API key or alternate access token
+not ok 6 - saving a new voice origin never carries an old API key or alternate access token
+  ---
+  duration_ms: 110.743119
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:202:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:209:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: assistant settles a pending error once and can answer the next request
+not ok 7 - assistant settles a pending error once and can answer the next request
+  ---
+  duration_ms: 505.949726
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:230:3'
+  failureType: 'testCodeFailure'
+  error: 'operation timed out'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Timeout.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:38:68)
+    listOnTimeout (node:internal/timers:685:17)
+    process.processTimers (node:internal/timers:618:7)
+  ...
+# Subtest: assistant settles a pending close once and can answer the next request
+not ok 8 - assistant settles a pending close once and can answer the next request
+  ---
+  duration_ms: 504.167717
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:230:3'
+  failureType: 'testCodeFailure'
+  error: 'operation timed out'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Timeout.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:38:68)
+    listOnTimeout (node:internal/timers:685:17)
+    process.processTimers (node:internal/timers:618:7)
+  ...
+# Subtest: summary vocabulary updates preserve learned status and SRS scheduling; defaults apply only to new words
+not ok 9 - summary vocabulary updates preserve learned status and SRS scheduling; defaults apply only to new words
+  ---
+  duration_ms: 31.127989
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:274:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    status
+    
+    'new' !== 'known'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'known'
+  actual: 'new'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:291:98)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 0
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2786.766151

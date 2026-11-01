@@ -1,0 +1,201 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ava-english-tutor@1.0.0 test:e2e
+> node test/e2e.mjs
+
+Ava e2e 契约测试
+项目: <project>
+复现: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node <project>/test/e2e.mjs
+server: http://127.0.0.1:44087  mock upstream: http://127.0.0.1:42013/v1  sandbox: /tmp/ava-e2e-StwXNN
+
+## 健康检查 / 基础
+  ✔ GET /api/health 返回 SPEC 约定字段 (5ms)
+  ✔ GET /api/settings 初始无 Key，且不含 apiKey 原文 (3ms)
+  ✔ GET /api/content 内容结构完整 (3ms)
+  ✔ 静态文件：/、/avatar/preview.html、CSS/JS 模块均 200 (35ms)
+
+## 设置：PUT / key 安全 / 连接测试
+  ✔ PUT /api/settings 保存 baseUrl/model/apiKey/level/teacherName (5ms)
+  ✔ GET /api/settings 只暴露 keyHint（后 4 位），绝不含完整 key (1ms)
+  ✔ POST /api/settings/test 指向 mock 上游返回 ok:true (26ms)
+  ✔ POST /api/settings/test 上游 401 时返回 ok:false + error 且不泄露 key (6ms)
+  ✔ 非法 JSON 请求体返回 4xx + {ok:false,error} (2ms)
+  ✔ 未知 /api 路由返回 404 JSON (1ms)
+  ✔ settings.json 持久化文件权限为 600 (1ms)
+  ✔ 请求体超过 1MB 被拒绝（SPEC §2.6） (16ms)
+
+## 对话 SSE（真实上游 mock）
+      事件序列: meta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → feedback → done
+  ✔ POST /api/chat SSE 事件顺序 meta → delta+ → feedback → done (321ms)
+  ✔ chat 上游请求正确（携带 Authorization、messages 含用户输入、stream:true） (0ms)
+
+## 无 Key / 上游异常降级
+  ✔ clearKey 后 GET /api/settings 与 /api/health 均 hasKey:false (2ms)
+      事件序列: meta → delta → delta → delta → delta → delta → delta → feedback → done
+  ✔ 无 Key 时 /api/chat 自动 demo 降级且事件完整 (224ms)
+      事件序列: meta → delta → delta → delta → delta → delta → delta → feedback → done
+  ✔ 上游 401 时自动降级 demo（meta.demo=true）且事件完整 (234ms)
+      事件序列: meta → delta → error → done
+  ✔ 上游中途断流：服务端不崩溃，响应收尾且服务仍健康 (36ms)
+
+## v1.1 总结 / 单词表 / 自由对话
+  ✔ free 模式忽略 topicId，且 system prompt 不注入话题卡（v1.1 §A） (293ms)
+  ✔ 无 Key：POST /api/summary demo 总结 + 写入当天单词表/SRS (7ms)
+  ✔ GET /api/wordbook：今天置顶、结构完整、排序正确 (2ms)
+  ✔ POST /api/wordbook：同词去重合并（timesSeen+1）、新词追加 (3ms)
+  ✔ POST /api/summary 写入 SRS：keyWords 成为 box 0 新词 (2ms)
+  ✔ POST /api/summary 参数校验：空 / 无 user / 非法 JSON → 400 (4ms)
+  ✔ 有 mock 上游：POST /api/summary → demo:false 且解析严格 JSON (10ms)
+  ✔ 上游返回坏 JSON：summary 自动降级 demo 且仍 200 (8ms)
+  ✔ summary 上游 401：自动降级 demo 且仍 200 (4ms)
+
+## v1.2 中文求助 / 相关性
+      事件序列: meta → delta → delta → delta → delta → delta → delta → delta → delta → feedback → done
+  ✔ 无 Key 中文消息：meta.chinese=true + chineseHelp 合法 + corrections=[] (293ms)
+  ✔ 无 Key 未命中中文：chineseHelp.unmatched=true 且 tips 提示 API Key (584ms)
+  ✔ 英文直接提问：meta.chinese=false 且 demo 正面回答（非反问代替） (330ms)
+  ✔ 英文陈述：demo 引用用户原话再承接（相关性） (624ms)
+  ✔ 含中文求助的对话：demo 总结给出正向学习策略建议 (6ms)
+      事件序列: meta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → feedback → done
+  ✔ 有 Key 中文消息：meta.chinese=true、chineseHelp 保留、上游 prompt 含中文协议 (378ms)
+  ✔ 有 Key 英文提问：prompt 含「回答最新消息/禁止空洞夸奖」且 chineseHelp=null (289ms)
+  ✔ 有 Key 含中文的对话总结：正常生成且 summary prompt 含中文求助正向规则 (5ms)
+
+## v1.3 阅读讲解 / 文档 API
+      图片 OCR 仅 macOS，已跳过 png 上传
+  ✔ POST /api/doc/upload 五类夹具：元数据/预览/隐私（不返回正文） (13ms)
+  ✔ 上传错误路径：不支持格式 / 空内容 / 扫描版 PDF / 超大文件 → 中文 400 (464ms)
+  ✔ GET /api/doc/list：倒序、元数据无正文 (4ms)
+  ✔ GET /api/doc/:id 详情（含 text/analysis）+ 404 (2ms)
+  ✔ POST /api/doc/analyze 无 Key：demo 分析字段齐全 + 缓存 (5ms)
+  ✔ 有 Key：analyze 走 mock 严格 JSON → demo:false 且上游 prompt 含材料 (8ms)
+  ✔ 上游分析坏 JSON：降级 demo 且仍 200 (3ms)
+      事件序列: meta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → delta → feedback → done
+  ✔ 无 Key 阅读讲解：start → meta.doc + 英文开场/第一题；回答 → 下一题 (951ms)
+  ✔ 阅读讲解中文求助：meta.chinese=true + chineseHelp + corrections=[] (438ms)
+  ✔ 阅读讲解错误：缺 docId → 400；无效 docId → 404 (3ms)
+  ✔ 有 Key 阅读讲解：meta.doc + 上游 prompt 含文档片段/一次一题/中文协议 (291ms)
+  ✔ DELETE /api/doc/:id：列表与详情移除，重复删除 404 (4ms)
+
+## v1.4 豆包实时语音 / 教练分析
+  ✔ 设置 v1.4：voiceEngine/volc 嵌套保存、掩码、health.volcConfigured (2ms)
+  ✔ POST /api/volc/test：mock 握手成功 + 鉴权头/session 配置正确 (250ms)
+  ✔ POST /api/volc/test 失败场景：鉴权/模型/音色 → 中文错误 (377ms)
+  ✔ POST /api/volc/test 未配置凭据：中文提示；恢复配置 (7ms)
+  ✔ /ws/voice 桥：start→ready→上行 PCM→asr/chat/audio→stop→ended (375ms)
+  ✔ /ws/voice 打断：客户端 interrupt → mock 收到 515 + TTS 收尾 (123ms)
+  ✔ /ws/voice PTT commit：补 80 帧静音触发；无 session commit 不崩 (1992ms)
+  ✔ /ws/voice 上行断线：mock 断开 → 客户端收到 error/ended 并清理 (83ms)
+  ✔ /ws/voice 未配置凭据：立即返回中文 error 并关闭 (69ms)
+  ✔ POST /api/coach demo：英文纠错 / 中文 chineseHelp(corrections=[]) / 空消息 400 (5ms)
+  ✔ POST /api/coach 有 Key：mock 严格 JSON → demo:false；中文 corrections 强制为空 (9ms)
+
+## v1.5 双语字幕翻译 /api/translate
+  ✔ /api/translate：豆包文本模式会话 → ok + 中文 + provider:volc；session 配置为文本模式且无音频 (13ms)
+  ✔ /api/translate：无豆包、有文本模型 Key → provider:llm 中文 (6ms)
+  ✔ /api/translate：两者都无凭据 → ok:false + 中文错误 + 全 null（HTTP 200 不 500） (2ms)
+  ✔ /api/translate：上游翻译失败（返回英文）→ ok:false 静默降级，不 500 (6ms)
+  ✔ /api/translate 参数校验：空/超 8 条/超长截断/target 非 zh (40ms)
+
+## v1.6 手机版 / 角色 / 计划 / 助手
+  ✔ GET /api/characters：3 角色结构完整且不含人设 prompt (2ms)
+  ✔ GET /api/characters/:id 单个成功；无效 id → 404 中文 (1ms)
+  ✔ GET /api/plan：新沙箱未创建计划 → {ok:true, plan:null} (1ms)
+  ✔ POST /api/assistant demo：create_plan → 计划落库并可查询 (5ms)
+  ✔ POST /api/assistant demo：update_plan / open_scene / open_tab / review_words / 兜底 (9ms)
+  ✔ POST /api/assistant：豆包文本模式 → demo:false，文本会话无 TTS/音频 (9ms)
+  ✔ /api/chat characterId（demo）：meta.character + 角色开场口吻；无效 id 回退 (440ms)
+  ✔ /api/chat characterId（live）：角色人设进入 system prompt (294ms)
+  ✔ /ws/voice 带 characterId：3 角色音色/人设分别生效；无效 id 回退默认 (536ms)
+  ✔ PWA manifest 可被识别：standalone + icons + theme_color；手机版资源可加载 (8ms)
+  ✔ v1.7 角色原图/talking-head：jpg 200 + motion.json 标定 + WebGL 引擎脚本 (65ms)
+  ✔ GET /mobile 与 /mobile.html 返回手机壳；旧版 / 保持不变 (4ms)
+
+## v1.8 对话引擎 / 知识库 / 记忆 / 兴趣
+  ✔ GET/PUT /api/profile：兴趣档案读写 + 清洗 (3ms)
+  ✖ 知识库上传 5 类文件（txt/md/docx/pdf/png）→ 切块/标题/语言/列表/删除 (13ms)
+    AssertionError [ERR_ASSERTION]: 上传 ocr-test.png
+          期望状态码: 200
+          实际状态码: 400
+          响应片段: {"ok":false,"error":"图片 OCR 目前仅支持 macOS（使用系统 Vision 框架）"}
+    
+    400 !== 200
+    
+        at expectStatus (file://<project>/test/e2e.mjs:120:12)
+  ✔ 知识库上传错误路径：空内容/不支持格式/空 base64 → 中文 400 (3ms)
+  ✔ 中文文章上传（docExtract 放宽 CJK）→ lang=zh + 中文切块 (3ms)
+  ✔ 网页链接导入：本地 HTML → 标题/正文提取；无效 URL/空 URL 中文错误 (7ms)
+  ✔ enrich：无 Key 中文错误；有 Key → enrichStatus=done + chunk 摘要/关键词 (7ms)
+  ✔ 知识库检索：英文/中文 query 均命中，带 docId/title/chunkId/score；空 query 400 (9ms)
+  ✖ /api/chat kbMode=grounded：meta.kb.hits 合法 + prompt 引用材料 + 回复非空 (289ms)
+    AssertionError [ERR_ASSERTION]: system prompt 应注入知识库材料
+          期望匹配: /Knowledge base material/i
+          实际: "You are Elena, an English teacher in a MATERIAL LESSON for a Chinese learner (CEFR B1).\n\nYou are Elena (伦敦, 画廊策展人). Keep your warm personality, but this is a MATERIAL LESSON, not free chat.\n\nThe student is intermediate (CEFR B1). Speak at a natural pace with common idioms and connected sentences. As"
+        at expectMatch (file://<project>/test/e2e.mjs:110:10)
+        at file://<project>/test/e2e.mjs:2715:11
+        at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+        at async check (file://<project>/test/e2e.mjs:66:5)
+        at async file://<project>/test/e2e.mjs:2701:9
+  ✔ /api/chat kbMode=divergent：prompt 含发散指令、meta.kb.mode=divergent (291ms)
+  ✔ /api/chat kbMode=free：不注入知识库；无效 docId 回退空命中 (574ms)
+  ✔ 导演反重复：连续两轮都调用导演，第二轮把第一轮问题放入 avoid (580ms)
+  ✔ 记忆：/api/summary 带 characterId → 后台写入 memory.json（interests/facts/topics/summary） (48ms)
+  ✔ /ws/voice kbDocIds：ready.kb + persona 注入材料标题/要点；无 kb 时旧行为 (689ms)
+  ✔ 空知识库讨论：grounded 无 docId/空库 → 不报错并正常回复 (286ms)
+
+## v2.7 单词复习系统 /api/review + summary 自动收录
+  ✔ /api/review/*：summary/add/list/due/patch/delete/grade 全路由 + 中文错误 (34ms)
+  ✔ /api/summary 自动收录 keyWords → review（source=conversation/new/去重） (10ms)
+
+## v3.1 自由文本计划 / AI 3 课生成 / 老师 / TTS / lesson 上下文
+  ✔ POST /api/assistant 自由文本 → plan v3 generating → 3 课 ready（每课5句/3步） (44ms)
+  ✔ PATCH teacher 切换老师保留课件；/api/lessons 列表/详情；POST generate 重新生成 (51ms)
+  ✔ scene-done v3.1 进度/lock/幂等/全完成；/api/tts/voices 三角色；lesson 上下文透传 (656ms)
+
+## v3.2 课程断点续学 /api/plan/lesson-progress + restart
+  ✔ lesson-progress 保存/clamp → GET plan resume；restart 清空；scene-done 清空并 next (61ms)
+
+## 跟读评分 /api/score
+  ✔ 完全正确：高分 + 星级 + 逐词 ok + 中文 tips (2ms)
+  ✔ 漏词/错词：分数下降且对应逐词状态为 miss/close (3ms)
+  ✔ 空输入/垃圾输入：不崩溃、返回合理低分或明确 4xx (2ms)
+
+## 进度 /api/progress（含 SRS 合并）
+  ✔ GET /api/progress 初始结构完整 (1ms)
+  ✔ POST /api/progress 累加 turns/minutes 并更新 streak/days (2ms)
+  ✔ POST /api/progress reviewWords 走 SRS：答对 box+1、答错回落 (4ms)
+
+## 服务端健壮性补充
+  ✔ /api/chat GET 方法不被支持（非 SSE 路径不 200） (1ms)
+  ✔ 并发 health/score 请求不互相阻塞 (2ms)
+  ✔ 路径穿越不会泄露 server.js (0ms)
+
+===== e2e 汇总 =====
+  通过 102 / 失败 2 / 阻塞 0 / 跳过 0
+  结果文件: <project>/test/artifacts/e2e-results.json
+
+失败用例:
+  ✖ [v1.8 对话引擎 / 知识库 / 记忆 / 兴趣] 知识库上传 5 类文件（txt/md/docx/pdf/png）→ 切块/标题/语言/列表/删除
+      AssertionError [ERR_ASSERTION]: 上传 ocr-test.png
+            期望状态码: 200
+            实际状态码: 400
+            响应片段: {"ok":false,"error":"图片 OCR 目前仅支持 macOS（使用系统 Vision 框架）"}
+      
+      400 !== 200
+      
+          at expectStatus (file://<project>/test/e2e.mjs:120:12)
+          at file://<project>/test/e2e.mjs:2562:13
+          at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+  ✖ [v1.8 对话引擎 / 知识库 / 记忆 / 兴趣] /api/chat kbMode=grounded：meta.kb.hits 合法 + prompt 引用材料 + 回复非空
+      AssertionError [ERR_ASSERTION]: system prompt 应注入知识库材料
+            期望匹配: /Knowledge base material/i
+            实际: "You are Elena, an English teacher in a MATERIAL LESSON for a Chinese learner (CEFR B1).\n\nYou are Elena (伦敦, 画廊策展人). Keep your warm personality, but this is a MATERIAL LESSON, not free chat.\n\nThe student is intermediate (CEFR B1). Speak at a natural pace with common idioms and connected sentences. As"
+          at expectMatch (file://<project>/test/e2e.mjs:110:10)
+          at file://<project>/test/e2e.mjs:2715:11
+          at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+          at async check (file://<project>/test/e2e.mjs:66:5)
+          at async file://<project>/test/e2e.mjs:2701:9
+          at async group (file://<project>/test/e2e.mjs:60:11)
+          at async main (file://<project>/test/e2e.mjs:2499:5)
+
+复现: /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node <project>/test/e2e.mjs

@@ -1,0 +1,106 @@
+TAP version 13
+# Subtest: daily library keeps the same lesson on repeated visits and after completion that day
+ok 1 - daily library keeps the same lesson on repeated visits and after completion that day
+  ---
+  duration_ms: 4.322868
+  type: 'test'
+  ...
+# Subtest: day six advances to the next book, even though yesterday has a saved today record
+ok 2 - day six advances to the next book, even though yesterday has a saved today record
+  ---
+  duration_ms: 2.299834
+  type: 'test'
+  ...
+# Subtest: daily scheduling keeps its existing calendar progression when a day is not marked complete
+ok 3 - daily scheduling keeps its existing calendar progression when a day is not marked complete
+  ---
+  duration_ms: 0.926381
+  type: 'test'
+  ...
+# Subtest: finishing all books starts a review cycle while preserving completed statistics
+ok 4 - finishing all books starts a review cycle while preserving completed statistics
+  ---
+  duration_ms: 3.216871
+  type: 'test'
+  ...
+# Subtest: knowledge list API error preserves loaded materials and selections with a visible error
+ok 5 - knowledge list API error preserves loaded materials and selections with a visible error
+  ---
+  duration_ms: 2.224392
+  type: 'test'
+  ...
+# Subtest: knowledge list network rejection does not erase the previously loaded list
+ok 6 - knowledge list network rejection does not erase the previously loaded list
+  ---
+  duration_ms: 0.978739
+  type: 'test'
+  ...
+# Subtest: successful knowledge refresh replaces the list and removes only stale selections
+ok 7 - successful knowledge refresh replaces the list and removes only stale selections
+  ---
+  duration_ms: 1.735849
+  type: 'test'
+  ...
+# Subtest: an explicitly successful empty knowledge list clears obsolete data
+ok 8 - an explicitly successful empty knowledge list clears obsolete data
+  ---
+  duration_ms: 0.899912
+  type: 'test'
+  ...
+# Subtest: difficulty empty failure response restores the previous value and never reports success
+ok 9 - difficulty empty failure response restores the previous value and never reports success
+  ---
+  duration_ms: 2.214938
+  type: 'test'
+  ...
+# Subtest: difficulty structured failure restores the previous value and never reports success
+ok 10 - difficulty structured failure restores the previous value and never reports success
+  ---
+  duration_ms: 1.184423
+  type: 'test'
+  ...
+# Subtest: difficulty network exception restores the previous value and never reports success
+ok 11 - difficulty network exception restores the previous value and never reports success
+  ---
+  duration_ms: 1.60783
+  type: 'test'
+  ...
+# Subtest: difficulty stays disabled while saving and uses the confirmed server value
+ok 12 - difficulty stays disabled while saving and uses the confirmed server value
+  ---
+  duration_ms: 0.976075
+  type: 'test'
+  ...
+# Subtest: profile exposes model and voice configuration and does not promise unconfigured speech output
+ok 13 - profile exposes model and voice configuration and does not promise unconfigured speech output
+  ---
+  duration_ms: 1.120489
+  type: 'test'
+  ...
+# Subtest: configured voice profile describes credentials without claiming a verified connection
+ok 14 - configured voice profile describes credentials without claiming a verified connection
+  ---
+  duration_ms: 1.295868
+  type: 'test'
+  ...
+# Subtest: settings deep link opens the existing complete form and reveals fixed mobile return links
+ok 15 - settings deep link opens the existing complete form and reveals fixed mobile return links
+  ---
+  duration_ms: 3.469485
+  type: 'test'
+  ...
+# Subtest: ordinary legacy entry does not unexpectedly open settings
+ok 16 - ordinary legacy entry does not unexpectedly open settings
+  ---
+  duration_ms: 1.485899
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 48.759429

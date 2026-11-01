@@ -1,0 +1,6 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> ava-english-tutor@1.0.0 check
+> node scripts/check-syntax.mjs
+
+JavaScript syntax: 62/62 passed

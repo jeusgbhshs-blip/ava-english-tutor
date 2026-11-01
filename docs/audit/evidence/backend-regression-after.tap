@@ -1,0 +1,76 @@
+TAP version 13
+# Subtest: malformed Host returns 400 and the same server remains healthy
+ok 1 - malformed Host returns 400 and the same server remains healthy
+  ---
+  duration_ms: 173.512009
+  type: 'test'
+  ...
+# Subtest: --open keeps the server alive when no browser launcher is installed
+ok 2 - --open keeps the server alive when no browser launcher is installed
+  ---
+  duration_ms: 221.138819
+  type: 'test'
+  ...
+# Subtest: text connection test binds stored keys to the configured origin
+ok 3 - text connection test binds stored keys to the configured origin
+  ---
+  duration_ms: 186.49045
+  type: 'test'
+  ...
+# Subtest: saving a new text origin requires a new key or explicit clear, closing the PUT then test bypass
+ok 4 - saving a new text origin requires a new key or explicit clear, closing the PUT then test bypass
+  ---
+  duration_ms: 189.516945
+  type: 'test'
+  ...
+# Subtest: voice connection test requires explicit credentials for a different origin and drops stored alternatives
+ok 5 - voice connection test requires explicit credentials for a different origin and drops stored alternatives
+  ---
+  duration_ms: 637.48406
+  type: 'test'
+  ...
+# Subtest: saving a new voice origin never carries an old API key or alternate access token
+ok 6 - saving a new voice origin never carries an old API key or alternate access token
+  ---
+  duration_ms: 383.603279
+  type: 'test'
+  ...
+# Subtest: an environment text key cannot be rebound by saving a new origin with a different key or clear
+ok 7 - an environment text key cannot be rebound by saving a new origin with a different key or clear
+  ---
+  duration_ms: 143.281087
+  type: 'test'
+  ...
+# Subtest: environment voice credentials cannot revive on a new saved origin
+ok 8 - environment voice credentials cannot revive on a new saved origin
+  ---
+  duration_ms: 396.959562
+  type: 'test'
+  ...
+# Subtest: assistant settles a pending error once and can answer the next request
+ok 9 - assistant settles a pending error once and can answer the next request
+  ---
+  duration_ms: 7.920796
+  type: 'test'
+  ...
+# Subtest: assistant settles a pending close once and can answer the next request
+ok 10 - assistant settles a pending close once and can answer the next request
+  ---
+  duration_ms: 2.144432
+  type: 'test'
+  ...
+# Subtest: summary vocabulary updates preserve learned status and SRS scheduling; defaults apply only to new words
+ok 11 - summary vocabulary updates preserve learned status and SRS scheduling; defaults apply only to new words
+  ---
+  duration_ms: 19.417053
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3918.696547

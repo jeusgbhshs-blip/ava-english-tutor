@@ -1202,8 +1202,9 @@ export function renderProfile() {
   const mastered = Number(progress.masteredWords) || 0
   const streak = Number(progress.streak) || 0
   const turns = Number(progress.totalTurns) || 0
-  const engine = settings.voiceEngine === 'volc' ? '豆包实时语音 3.0' : '浏览器内置语音'
-  const engineReady = settings.voiceEngine === 'volc' ? !!(settings.volc && settings.volc.configured) : true
+  const voiceConfigured = !!(settings.volc && settings.volc.configured)
+  const realtimeConfigured = settings.voiceEngine === 'volc' && voiceConfigured
+  const engine = realtimeConfigured ? '豆包实时语音' : '浏览器语音识别'
   const levels = ['A1', 'A2', 'B1', 'B2', 'C1']
   host.innerHTML = `
     <div class="profile-page">
@@ -1253,9 +1254,19 @@ export function renderProfile() {
             </div>
             <div class="list-row">
               <span class="list-icon">${icon('volume')}</span>
-              <div class="list-main"><div class="list-title">语音引擎</div><div class="list-sub">${engineReady ? '已就绪' : '未配置凭据，将使用浏览器语音'}</div></div>
-              <span class="list-value" style="color:${engineReady ? 'var(--m-teal)' : 'var(--m-warm)'}">${esc(engine)}</span>
+              <div class="list-main"><div class="list-title">语音输入</div><div class="list-sub">${realtimeConfigured ? '已配置，连接情况以通话中的麦克风检测为准' : '识别可用性取决于浏览器，也可以用文字输入'}</div></div>
+              <span class="list-value">${esc(engine)}</span>
             </div>
+            <div class="list-row">
+              <span class="list-icon">${icon('volume')}</span>
+              <div class="list-main"><div class="list-title">角色朗读</div><div class="list-sub">${voiceConfigured ? '角色朗读还需 API Key 和独立 TTS 权限，点读时验证' : '请先配置豆包 API Key 和 TTS 权限；系统内置朗读已关闭'}</div></div>
+              <span class="list-value">${voiceConfigured ? '语音凭据已填写' : '未配置'}</span>
+            </div>
+            <a class="list-row" href="/?settings=1" aria-label="打开模型与语音设置">
+              <span class="list-icon">${icon('spark')}</span>
+              <div class="list-main"><div class="list-title">模型与语音设置</div><div class="list-sub">配置 AI 模型和豆包凭据，保存后返回主界面</div></div>
+              <span class="list-value">${icon('chevron')}</span>
+            </a>
             <button type="button" class="list-row" data-act="wordbook">
               <span class="list-icon">${icon('book')}</span>
               <div class="list-main"><div class="list-title">今日单词表</div><div class="list-sub">重点单词自动收录，随时复习</div></div>
@@ -1334,11 +1345,23 @@ function bindProfile(host) {
   if (level) {
     level.onchange = async () => {
       const value = level.value
-      const saved = await saveSettings({ level: value })
-      if (saved === null && M.settings) M.settings.level = value
-      else if (M.settings) M.settings.level = value
-      toast(`已切换到 ${value} 难度`, 'ok')
-      renderCourses()
+      const previousValue = (M.settings && M.settings.level) || 'A2'
+      level.disabled = true
+      try {
+        const saved = await saveSettings({ level: value })
+        if (!saved || saved.ok === false) throw new Error((saved && saved.error) || '难度保存失败，请稍后重试')
+        const savedValue = saved.level || value
+        M.settings = { ...(M.settings || {}), level: savedValue }
+        level.value = savedValue
+        toast(`已切换到 ${savedValue} 难度`, 'ok')
+        renderCourses()
+      } catch (err) {
+        if (M.settings) M.settings.level = previousValue
+        level.value = previousValue
+        toast((err && err.message) || '难度保存失败，请稍后重试', 'bad', 3200)
+      } finally {
+        level.disabled = false
+      }
     }
   }
 }

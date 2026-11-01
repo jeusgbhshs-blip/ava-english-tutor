@@ -5,3 +5,10 @@ node_modules/
 .DS_Store
 *.log
 data-share/
+docs/assets/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!docs/audit/evidence/*.log

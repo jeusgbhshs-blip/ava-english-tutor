@@ -282,7 +282,7 @@ function normalizeListResponse(res) {
   if (!res || typeof res !== 'object') return null
   if (res.ok === false) {
     KB.error = String(res.error || '知识库读取失败')
-    return []
+    return null
   }
   const raw = Array.isArray(res.docs) ? res.docs : Array.isArray(res.items) ? res.items : Array.isArray(res.list) ? res.list : Array.isArray(res) ? res : []
   return raw.filter((doc) => doc && typeof doc === 'object')
@@ -297,7 +297,7 @@ export async function reloadDocs({ silent = false } = {}) {
     const res = await kbList()
     const docs = normalizeListResponse(res)
     if (docs === null) {
-      KB.error = '知识库接口暂不可用，请稍后重试'
+      KB.error = KB.error || '知识库接口暂不可用，请稍后重试'
     } else {
       KB.docs = docs
       KB.error = ''
@@ -307,6 +307,9 @@ export async function reloadDocs({ silent = false } = {}) {
       })
       KB.lastLoadedAt = Date.now()
     }
+  } catch (err) {
+    // 请求失败时保留上次成功加载的材料和选择，不能把失败当成空库。
+    KB.error = (err && err.message) || '知识库接口暂不可用，请稍后重试'
   } finally {
     KB.loading = false
     renderList()

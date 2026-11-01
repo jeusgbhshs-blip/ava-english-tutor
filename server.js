@@ -8,6 +8,7 @@ import os from 'node:os';
 import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { spawn } from 'node:child_process';
+import { credentialsForEndpoint } from './lib/requestSafety.js';
 import {
   loadSettings,
   saveSettingsPatch,
@@ -584,8 +585,19 @@ async function handleApi(req, res, url) {
       ...stored,
       baseUrl: String(body.baseUrl || stored.baseUrl).trim().replace(/\/+$/, ''),
       model: String(body.model || stored.model).trim(),
-      apiKey: typeof body.apiKey === 'string' && body.apiKey.trim() ? body.apiKey.trim() : stored.apiKey,
     };
+    try {
+      candidate.apiKey = credentialsForEndpoint({
+        previousUrl: stored.baseUrl,
+        nextUrl: candidate.baseUrl,
+        previousCredentials: { apiKey: stored.apiKey },
+        providedCredentials: { apiKey: body.apiKey },
+        clear: body.clearKey,
+        errorMessage: '测试新的模型接口源站时，请填写用于该地址的 API Key。已保存的 Key 不会发送到新地址。',
+      }).apiKey;
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: err.message });
+    }
     if (!candidate.apiKey) {
       return sendJson(res, 200, { ok: false, error: '还没有填写 API Key' });
     }
@@ -1194,8 +1206,19 @@ async function handleApi(req, res, url) {
     for (const key of ['appId', 'model', 'speaker', 'endpoint', 'resourceId']) {
       if (typeof body[key] === 'string' && body[key].trim()) candidate[key] = body[key].trim();
     }
-    if (typeof body.apiKey === 'string' && body.apiKey.trim()) candidate.apiKey = body.apiKey.trim();
-    if (typeof body.accessToken === 'string' && body.accessToken.trim()) candidate.accessToken = body.accessToken.trim();
+    try {
+      Object.assign(candidate, credentialsForEndpoint({
+        previousUrl: base.endpoint,
+        nextUrl: candidate.endpoint,
+        previousCredentials: { apiKey: base.apiKey, accessToken: base.accessToken },
+        providedCredentials: { apiKey: body.apiKey, accessToken: body.accessToken },
+        clear: body.clearKey,
+        protocols: ['ws:', 'wss:'],
+        errorMessage: '测试新的语音接口源站时，请填写用于该地址的 API Key 或 Access Token。已保存的凭据不会发送到新地址。',
+      }));
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: err.message });
+    }
     if (!candidate.appId) {
       return sendJson(res, 200, { ok: false, error: '请先填写 App ID（火山引擎控制台 → 语音技术 → 应用管理）' });
     }
@@ -1444,8 +1467,13 @@ function publicKBMeta(doc) {
 }
 
 async function requestHandler(req, res) {
-  const host = req.headers.host || '127.0.0.1';
-  const url = new URL(req.url || '/', `http://${host}`);
+  let url;
+  try {
+    const host = req.headers.host || '127.0.0.1';
+    url = new URL(req.url || '/', `http://${host}`);
+  } catch {
+    return sendJson(res, 400, { ok: false, error: '请求地址或 Host 格式不正确' });
+  }
   try {
     const apiResult = await handleApi(req, res, url);
     if (apiResult !== false) return;
@@ -1695,12 +1723,16 @@ async function main() {
   console.log('[Ava] 首次使用：打开页面后点右上角设置页，填入 API Key 即可升级为真 AI 对话；不填也能用演示模式。');
 
   if (args.open) {
+    const command = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'explorer.exe' : 'xdg-open';
     const target = process.platform === 'darwin' ? ['-a', 'Google Chrome', url] : [url];
+    const openFailed = () => console.warn(`[Ava] 无法自动打开浏览器，请手动访问 ${url}`);
     try {
-      const child = spawn('open', target, { detached: true, stdio: 'ignore' });
+      const child = spawn(command, target, { detached: true, stdio: 'ignore' });
+      child.once('error', openFailed);
+      child.once('exit', (code) => { if (code && process.platform !== 'win32') openFailed(); });
       child.unref();
     } catch {
-      /* 打不开浏览器时用户可手动访问 */
+      openFailed();
     }
   }
 

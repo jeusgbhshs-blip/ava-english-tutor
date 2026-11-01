@@ -140,7 +140,8 @@ function ensureToday() {
   }
   let book = currentBook(state)
   let entry = state.books[book.id]
-  if (!entry || (entry.cursor >= DAYS_PER_BOOK && !state.today)) {
+  // 同日节选已在上方返回；这里的 today 可能属于昨天，不能阻止读完后换书。
+  if (!entry || entry.cursor >= DAYS_PER_BOOK) {
     const next = nextBookWithRoom(state)
     if (next) book = next
     else {

@@ -1,0 +1,9 @@
+Book rollover using exact source functions in isolated memory storage:
+{"date":1,"book":"happyprince","lesson":1}
+{"date":2,"book":"happyprince","lesson":2}
+{"date":3,"book":"happyprince","lesson":3}
+{"date":4,"book":"happyprince","lesson":4}
+{"date":5,"book":"happyprince","lesson":5}
+{"date":6,"book":"happyprince","lesson":5}
+{"date":7,"book":"happyprince","lesson":5}
+KB error result: {"error":"","docs":[],"selected":[]}

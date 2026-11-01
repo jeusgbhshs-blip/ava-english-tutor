@@ -1,0 +1,22 @@
+[
+  {
+    "probe": "unauthenticated_settings_and_cross_origin_key_reuse",
+    "settingsStatus": 200,
+    "testStatus": 200,
+    "requests": 1,
+    "receivedDummy": true
+  },
+  {
+    "probe": "malformed_host",
+    "response": {
+      "error": "ECONNRESET"
+    },
+    "serverExitCode": 1,
+    "invalidUrlObserved": true
+  },
+  {
+    "probe": "open_flag_linux",
+    "serverExitCode": null,
+    "spawnFailure": false
+  }
+]

@@ -1,0 +1,242 @@
+{
+  "imports": [
+    {
+      "from": "web/js/store.js",
+      "ref": "./api.js",
+      "target": "web/js/api.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/modes.js",
+      "ref": "./api.js",
+      "target": "web/js/api.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/modes.js",
+      "ref": "./ui.js",
+      "target": "web/js/ui.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/main.js",
+      "ref": "./api.js",
+      "target": "web/js/api.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/main.js",
+      "ref": "./speech.js",
+      "target": "web/js/speech.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/main.js",
+      "ref": "./store.js",
+      "target": "web/js/store.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/main.js",
+      "ref": "./ui.js",
+      "target": "web/js/ui.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/main.js",
+      "ref": "./modes.js",
+      "target": "web/js/modes.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/main.js",
+      "ref": "./doubao-voice.js",
+      "target": "web/js/doubao-voice.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/main.js",
+      "ref": "../avatar/avatar.js",
+      "target": "web/avatar/avatar.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/kb.js",
+      "ref": "./core.js",
+      "target": "web/js/mobile/core.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/kb.js",
+      "ref": "./library.js",
+      "target": "web/js/mobile/library.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/library.js",
+      "ref": "./core.js",
+      "target": "web/js/mobile/core.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/library.js",
+      "ref": "./core.js",
+      "target": "web/js/mobile/core.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/library.js",
+      "ref": "./book-library.js",
+      "target": "web/js/mobile/book-library.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/voice-audio.js",
+      "ref": "../speech.js",
+      "target": "web/js/speech.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/review.js",
+      "ref": "../api.js",
+      "target": "web/js/api.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/review.js",
+      "ref": "./core.js",
+      "target": "web/js/mobile/core.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/review.js",
+      "ref": "../speech.js",
+      "target": "web/js/speech.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/review.js",
+      "ref": "./voice-audio.js",
+      "target": "web/js/mobile/voice-audio.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/app.js",
+      "ref": "./core.js",
+      "target": "web/js/mobile/core.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/app.js",
+      "ref": "./screens.js",
+      "target": "web/js/mobile/screens.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/app.js",
+      "ref": "../speech.js",
+      "target": "web/js/speech.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/app.js",
+      "ref": "./kb.js",
+      "target": "web/js/mobile/kb.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/app.js",
+      "ref": "./call.js",
+      "target": "web/js/mobile/call.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/app.js",
+      "ref": "./review.js",
+      "target": "web/js/mobile/review.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/screens.js",
+      "ref": "./core.js",
+      "target": "web/js/mobile/core.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/screens.js",
+      "ref": "./review.js",
+      "target": "web/js/mobile/review.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/screens.js",
+      "ref": "./library.js",
+      "target": "web/js/mobile/library.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/screens.js",
+      "ref": "../speech.js",
+      "target": "web/js/speech.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/screens.js",
+      "ref": "./voice-audio.js",
+      "target": "web/js/mobile/voice-audio.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/call.js",
+      "ref": "./core.js",
+      "target": "web/js/mobile/core.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/call.js",
+      "ref": "../speech.js",
+      "target": "web/js/speech.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/call.js",
+      "ref": "./voice-audio.js",
+      "target": "web/js/mobile/voice-audio.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/call.js",
+      "ref": "../talking-head.js",
+      "target": "web/js/talking-head.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/call.js",
+      "ref": "../doubao-voice.js",
+      "target": "web/js/doubao-voice.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/core.js",
+      "ref": "../api.js",
+      "target": "web/js/api.js",
+      "exists": true
+    },
+    {
+      "from": "web/js/mobile/games.js",
+      "ref": "./core.js",
+      "target": "web/js/mobile/core.js",
+      "exists": true
+    }
+  ],
+  "missingImports": [],
+  "missingLiteralAssets": [],
+  "syntaxErrors": [],
+  "syntaxCheckCount": 20,
+  "commentFalsePositiveRemoved": "web/avatar/avatar.js documentation sample",
+  "worklet": {
+    "target": "web/js/pcm-worklet.js",
+    "exists": true,
+    "source": "web/js/doubao-voice.js:1054"
+  }
+}

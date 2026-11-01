@@ -51,6 +51,7 @@ export const OUTPUT_SAMPLE_RATE = 24000
 
 /** 建立 WebSocket 的超时（毫秒）。 */
 const WS_OPEN_TIMEOUT_MS = 10_000
+const SESSION_READY_TIMEOUT_MS = 25_000
 
 /** stop() 后等待服务端 ended/close 的上限（毫秒）。 */
 const STOP_TIMEOUT_MS = 4_000
@@ -243,6 +244,7 @@ class LinearResampler {
  * - `onASR({text, final})`：用户语音识别（interim 上字幕，final 记录用户消息并触发教练分析）；
  * - `onChat({text, final})`：Ava 回复文本流式字幕（与音频并行）；
  * - `onAudioStart()` / `onAudioEnd({reason})`：Ava 开始/结束说话（end 在播放队列真正排空后触发）；
+ * - `onAudioProgress({bytes, at})`：每块下行音频的字节数与到达时间（供播放健康检查）；
  * - `onLevel(level01)`：0..1 播放振幅（RMS），直接驱动数字人口型；停止后回调 0；
  * - `onMicLevel(level01)`：可选，麦克风输入振幅（倾听光环）；
  * - `onError(err)`：`Error & {code, message 中文}`；
@@ -263,6 +265,7 @@ class LinearResampler {
  *   wsUrl?: string,
  *   url?: string,
  *   workletUrl?: string,
+ *   readyTimeoutMs?: number,
  *   mode?: string,
  *   level?: string,
  *   teacherName?: string,
@@ -278,6 +281,7 @@ class LinearResampler {
  *   onASR?: Function,
  *   onChat?: Function,
  *   onAudioStart?: Function,
+ *   onAudioProgress?: Function,
  *   onAudioEnd?: Function,
  *   onLevel?: Function,
  *   onMicLevel?: Function,
@@ -306,12 +310,13 @@ class LinearResampler {
 export function createDoubaoVoice(opts = {}) {
   const options = opts && typeof opts === 'object' ? opts : {}
 
-  /** @type {{onReady?: Function, onASR?: Function, onChat?: Function, onAudioStart?: Function, onAudioEnd?: Function, onLevel?: Function, onMicLevel?: Function, onError?: Function, onEnded?: Function}} */
+  /** @type {{onReady?: Function, onASR?: Function, onChat?: Function, onAudioStart?: Function, onAudioProgress?: Function, onAudioEnd?: Function, onLevel?: Function, onMicLevel?: Function, onError?: Function, onEnded?: Function}} */
   const handlers = {
     onReady: options.onReady,
     onASR: options.onASR,
     onChat: options.onChat,
     onAudioStart: options.onAudioStart,
+    onAudioProgress: options.onAudioProgress,
     onAudioEnd: options.onAudioEnd,
     onLevel: options.onLevel,
     onMicLevel: options.onMicLevel,
@@ -340,6 +345,12 @@ export function createDoubaoVoice(opts = {}) {
   let disposed = false
   /** @type {object|null} */
   let startFrame = null
+  let startPromise = null
+  let sessionGeneration = 0
+  let cancelSocketOpen = null
+  let cancelCaptureStart = null
+  let readyWaiter = null
+  let pendingReadyInfo = null
 
   /** @type {ReturnType<typeof setTimeout>|null} */
   let stopTimer = null
@@ -444,7 +455,7 @@ export function createDoubaoVoice(opts = {}) {
   }
 
   /**
-   * 把一帧音频暂存到待发缓冲（仅在 WS 未 OPEN 时使用；上限 100 帧≈2s）。
+   * 重连未就绪时暂存一帧音频（上限 100 帧≈2s）；初次启动在 ready 后才采音。
    * @param {ArrayBuffer} buffer
    */
   function queueAudioFrame(buffer) {
@@ -467,7 +478,7 @@ export function createDoubaoVoice(opts = {}) {
    */
   function flushPendingAudio() {
     if (!pendingAudio.length) return false
-    if (!ws || ws.readyState !== 1) return false
+    if (!ready || !ws || ws.readyState !== 1) return false
     const frames = pendingAudio
     pendingAudio = []
     for (const frame of frames) {
@@ -527,8 +538,9 @@ export function createDoubaoVoice(opts = {}) {
         return
       }
     }
-    if (ws && ws.readyState === 1) {
+    if (ready && ws && ws.readyState === 1) {
       try {
+        flushPendingAudio()
         ws.send(buffer)
         recordFrameSent()
       } catch {
@@ -561,9 +573,48 @@ export function createDoubaoVoice(opts = {}) {
    * @returns {boolean} 是否已恢复发送（未激活/已 dispose 返回 false，不抛错）
    */
   function resumeMic() {
-    if (disposed || !active) return false
+    if (disposed || !active || !ready) return false
     micPaused = false
     return true
+  }
+
+  /** 本地 WebSocket 已打开不代表上游会话已就绪。所有启动/重连共用这个门禁。 */
+  function waitForReady() {
+    if (ready) return Promise.resolve(true)
+    if (readyWaiter) return readyWaiter.promise
+    const requested = Number(options.readyTimeoutMs)
+    const timeoutMs = Number.isFinite(requested) && requested > 0
+      ? Math.min(requested, 60_000)
+      : SESSION_READY_TIMEOUT_MS
+    const waiter = { promise: null, resolve: null, reject: null, timer: null }
+    waiter.promise = new Promise((resolve, reject) => {
+      waiter.resolve = resolve
+      waiter.reject = reject
+    })
+    waiter.timer = setTimeout(() => {
+      settleReady(makeVoiceError('timeout', '上游语音会话未能就绪，请重试。'))
+    }, timeoutMs)
+    readyWaiter = waiter
+    return waiter.promise
+  }
+
+  function settleReady(error = null) {
+    const waiter = readyWaiter
+    if (!waiter) return false
+    readyWaiter = null
+    clearTimeout(waiter.timer)
+    if (error) waiter.reject(error)
+    else waiter.resolve(true)
+    return true
+  }
+
+  function cancelPendingStart() {
+    sessionGeneration += 1
+    startPromise = null
+    pendingReadyInfo = null
+    settleReady(makeVoiceError('cancelled', '语音连接已取消。'))
+    if (cancelSocketOpen) cancelSocketOpen()
+    if (cancelCaptureStart) cancelCaptureStart()
   }
 
   /**
@@ -583,30 +634,36 @@ export function createDoubaoVoice(opts = {}) {
       socket.binaryType = 'arraybuffer'
       let settled = false
       let timer = null
-
-      timer = setTimeout(() => {
+      const cleanupOpening = () => {
+        if (timer) clearTimeout(timer)
+        if (cancelSocketOpen === cancel) cancelSocketOpen = null
+      }
+      const rejectOpening = (error) => {
         if (settled) return
         settled = true
-        try {
-          socket.close()
-        } catch {
-          /* 忽略 */
-        }
-        reject(makeVoiceError('timeout'))
+        cleanupOpening()
+        socket.onopen = null
+        socket.onmessage = null
+        socket.onclose = null
+        socket.onerror = null
+        try { socket.close() } catch { /* 忽略 */ }
+        reject(error)
+      }
+      const cancel = () => rejectOpening(makeVoiceError('cancelled', '语音连接已取消。'))
+      cancelSocketOpen = cancel
+
+      timer = setTimeout(() => {
+        rejectOpening(makeVoiceError('timeout'))
       }, WS_OPEN_TIMEOUT_MS)
 
       socket.onopen = () => {
         if (settled) return
         settled = true
-        if (timer) clearTimeout(timer)
+        cleanupOpening()
         resolve(socket)
       }
       socket.onerror = () => {
-        if (!settled) {
-          settled = true
-          if (timer) clearTimeout(timer)
-          reject(makeVoiceError('network'))
-        }
+        if (!settled) rejectOpening(makeVoiceError('network'))
       }
       socket.onmessage = (event) => {
         if (settled) {
@@ -615,9 +672,7 @@ export function createDoubaoVoice(opts = {}) {
       }
       socket.onclose = (event) => {
         if (!settled) {
-          settled = true
-          if (timer) clearTimeout(timer)
-          reject(makeVoiceError('closed'))
+          rejectOpening(makeVoiceError('closed'))
           return
         }
         if (ws === socket) handleSocketClosed(event)
@@ -664,7 +719,10 @@ export function createDoubaoVoice(opts = {}) {
 
     switch (payload.type) {
       case 'ready': {
+        if (!active || stopping) return
         ready = true
+        settleReady()
+        if (!micPaused) flushPendingAudio()
         /** @type {{model: string, speaker: string, demo: boolean, character?: object}} */
         const readyInfo = {
           model: typeof payload.model === 'string' ? payload.model : '',
@@ -677,7 +735,9 @@ export function createDoubaoVoice(opts = {}) {
         for (const key of ['kb', 'kbDocs', 'kbMode', 'kbDocIds']) {
           if (payload[key] !== undefined && payload[key] !== null) readyInfo[key] = payload[key]
         }
-        safeCall(handlers.onReady, readyInfo)
+        // 初次启动还需取得麦克风；避免权限弹窗期间 UI 已显示“正在录音”。
+        if (starting) pendingReadyInfo = readyInfo
+        else safeCall(handlers.onReady, readyInfo)
         break
       }
       case 'asr':
@@ -705,7 +765,7 @@ export function createDoubaoVoice(opts = {}) {
             : VOICE_ERROR_MESSAGES.server
         const err = makeVoiceError('server', message);
         /** @type {any} */ (err).code = typeof payload.code === 'string' ? payload.code : 'server'
-        emitError(err)
+        if (!settleReady(err)) emitError(err)
         break
       }
       case 'ended':
@@ -722,7 +782,9 @@ export function createDoubaoVoice(opts = {}) {
    */
   function handleSocketClosed(event) {
     ws = null
+    ready = false
     if (disposed) return
+    if (settleReady(makeVoiceError('closed'))) return
     if (stopping) {
       finish('closed')
       return
@@ -743,15 +805,24 @@ export function createDoubaoVoice(opts = {}) {
 
   /** 断线后尝试重连一次（麦克风采集保持，重连成功后重发 start 帧）。 */
   async function attemptReconnect() {
+    const generation = sessionGeneration
     try {
       await delay(300)
-      if (!active || disposed) return
+      if (!active || disposed || generation !== sessionGeneration) return
       const socket = await openSocket()
+      if (!active || disposed || generation !== sessionGeneration) {
+        socket.close()
+        return
+      }
       ws = socket
       ready = false
+      const readyPromise = waitForReady()
       if (startFrame) sendJSON(startFrame)
+      await readyPromise
     } catch {
+      if (!active || disposed || generation !== sessionGeneration) return
       emitError(makeVoiceError('network', '语音重连失败，请重新开始通话。'))
+      if (generation !== sessionGeneration) return
       finish('error')
     }
   }
@@ -1010,13 +1081,13 @@ export function createDoubaoVoice(opts = {}) {
    * 启动麦克风采集：AudioWorklet 优先，失败回退 ScriptProcessor。
    * @returns {Promise<void>}
    */
-  async function startCapture() {
+  async function startCapture(generation) {
     const mediaDevices = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
     if (!mediaDevices || typeof mediaDevices.getUserMedia !== 'function') {
       throw makeVoiceError('unsupported')
     }
     try {
-      mediaStream = await mediaDevices.getUserMedia({
+      const stream = await mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -1025,7 +1096,13 @@ export function createDoubaoVoice(opts = {}) {
         },
         video: false,
       })
+      if (generation !== sessionGeneration || !active || stopping || disposed) {
+        for (const track of stream.getTracks()) track.stop()
+        throw makeVoiceError('cancelled', '语音连接已取消。')
+      }
+      mediaStream = stream
     } catch (err) {
+      if (err && err.code === 'cancelled') throw err
       throw mapMediaError(err)
     }
 
@@ -1037,6 +1114,9 @@ export function createDoubaoVoice(opts = {}) {
       if (ctx.state === 'suspended') await ctx.resume()
     } catch {
       /* 自动播放限制下可能失败，继续尝试 */
+    }
+    if (generation !== sessionGeneration || !active || stopping || disposed) {
+      throw makeVoiceError('cancelled', '语音连接已取消。')
     }
     try {
       micSource = ctx.createMediaStreamSource(mediaStream)
@@ -1053,6 +1133,9 @@ export function createDoubaoVoice(opts = {}) {
           ? options.workletUrl
           : new URL('./pcm-worklet.js', import.meta.url).href
         await ctx.audioWorklet.addModule(workletUrl)
+        if (generation !== sessionGeneration || !active || stopping || disposed) {
+          throw makeVoiceError('cancelled', '语音连接已取消。')
+        }
         const node = new AudioWorkletNode(ctx, WORKLET_PROCESSOR_NAME, {
           numberOfInputs: 1,
           numberOfOutputs: 1,
@@ -1069,6 +1152,7 @@ export function createDoubaoVoice(opts = {}) {
         workletNode = node
         return
       } catch (err) {
+        if (err && err.code === 'cancelled') throw err
         console.warn('[doubao-voice] AudioWorklet 不可用，回退 ScriptProcessor：', err)
         if (workletNode) {
           try {
@@ -1099,6 +1183,20 @@ export function createDoubaoVoice(opts = {}) {
     micSource.connect(processor)
     processor.connect(muteGain)
     scriptNode = processor
+  }
+
+  async function waitForCapture(generation) {
+    let cancel
+    const cancelled = new Promise((resolve, reject) => {
+      cancel = () => reject(makeVoiceError('cancelled', '语音连接已取消。'))
+    })
+    cancelCaptureStart = cancel
+    try {
+      // 浏览器权限弹窗不可取消；停止通话先结束等待，迟到的 stream 会按 generation 释放。
+      await Promise.race([startCapture(generation), cancelled])
+    } finally {
+      if (cancelCaptureStart === cancel) cancelCaptureStart = null
+    }
   }
 
   /* ------------------------------ 会话生命周期 ------------------------------ */
@@ -1187,6 +1285,7 @@ export function createDoubaoVoice(opts = {}) {
    * @param {'ended'|'closed'|'error'|'dispose'} reason
    */
   function finish(reason) {
+    cancelPendingStart()
     micPaused = false
     if (endedEmitted && (reason === 'ended' || reason === 'closed')) {
       // 已结束过，只做资源清理
@@ -1211,6 +1310,7 @@ export function createDoubaoVoice(opts = {}) {
    * @param {number} [delayMs=0] 延迟关闭毫秒数（服务端 ended 后留出收尾时间）
    */
   function closeSocket(delayMs = 0) {
+    if (cancelSocketOpen) cancelSocketOpen()
     if (!ws) return
     const socket = ws
     ws = null
@@ -1238,10 +1338,11 @@ export function createDoubaoVoice(opts = {}) {
   /**
    * 开始实时语音通话。
    * @param {{mode?: string, level?: string, teacherName?: string, docId?: string, characterId?: string, kbDocIds?: string[], kbMode?: string, sceneId?: string, lessonId?: string, stageId?: string, lessonStep?: number}} [startOpts]
-   * @returns {Promise<boolean>} true=已建立连接且麦克风采集已启动；false=失败（已先触发 onError 中文）
+   * @returns {Promise<boolean>} true=上游 ready 且麦克风采集已启动；false=失败或取消（取消不报错）
    */
   async function start(startOpts = {}) {
-    if (active || starting) return active
+    if (startPromise) return startPromise
+    if (active || starting) return ready && active
     if (disposed) {
       emitError(makeVoiceError('unsupported', '语音客户端已释放，请重新创建。'))
       return false
@@ -1254,48 +1355,59 @@ export function createDoubaoVoice(opts = {}) {
       // 同源 ws 由 location 推导，无需额外校验
     }
 
+    // stop() 会等待旧服务端收尾；立即 start() 时先隔离旧连接，避免迟到 ended 结束新会话。
+    if (stopTimer) {
+      clearTimeout(stopTimer)
+      stopTimer = null
+    }
+    closeSocket()
     starting = true
     endedEmitted = false
     reconnectTried = false
     closingSocket = false
     ready = false
     stopping = false
+    pendingReadyInfo = null
     micPaused = Boolean(startOpts && startOpts.startPaused === true)
     pttGateMode = Boolean(startOpts && startOpts.ptt === true)
     pttGateLastLoudAt = 0
     pttGateFrames = 0
     startFrame = buildStartFrame(startOpts && typeof startOpts === 'object' ? startOpts : {})
-
-    try {
-      const socket = await openSocket()
-      ws = socket
-      active = true
-      // 先发 start 帧（服务端据此建立火山会话），再启动麦克风采集
-      sendJSON(startFrame)
+    const generation = ++sessionGeneration
+    startPromise = (async () => {
       try {
-        await startCapture()
+        const socket = await openSocket()
+        if (generation !== sessionGeneration || disposed || stopping) {
+          socket.close()
+          return false
+        }
+        ws = socket
+        active = true
+        const readyPromise = waitForReady()
+        // ready 前不采音、不宣告启动成功，避免首句被尚未就绪的上游静默丢弃。
+        if (!sendJSON(startFrame)) settleReady(makeVoiceError('network'))
+        await readyPromise
+        if (generation !== sessionGeneration || !active || disposed || stopping) return false
+        await waitForCapture(generation)
+        if (generation !== sessionGeneration || !active || disposed || stopping) return false
+        starting = false
+        const readyInfo = pendingReadyInfo
+        pendingReadyInfo = null
+        if (readyInfo) safeCall(handlers.onReady, readyInfo)
+        return generation === sessionGeneration && active && ready
       } catch (err) {
-        const mapped = err && /** @type {any} */ (err).name === 'VoiceError' ? /** @type {any} */ (err) : mapMediaError(err)
-        emitError(mapped)
+        if (generation !== sessionGeneration || disposed || stopping) return false
+        const mapped = err && /** @type {any} */ (err).name === 'VoiceError' ? /** @type {any} */ (err) : makeVoiceError('network')
+        if (mapped.code !== 'cancelled') emitError(mapped)
+        // onError 可能同步让上层停止/重建；不要再清理新一轮资源。
+        if (generation !== sessionGeneration) return false
         finish('error')
         return false
+      } finally {
+        if (generation === sessionGeneration) startPromise = null
       }
-      if (!active) {
-        // 采集期间服务端已报错/断开
-        stopCapture()
-        return false
-      }
-      starting = false
-      return true
-    } catch (err) {
-      starting = false
-      active = false
-      const mapped = err && /** @type {any} */ (err).name === 'VoiceError' ? /** @type {any} */ (err) : makeVoiceError('network')
-      emitError(mapped)
-      stopCapture()
-      closeSocket()
-      return false
-    }
+    })()
+    return startPromise
   }
 
   /**
@@ -1305,6 +1417,12 @@ export function createDoubaoVoice(opts = {}) {
   function stop() {
     if (!active && !starting) return false
     if (stopping) return true
+    if (starting) {
+      sendJSON({ type: 'stop' })
+      finish('closed')
+      return true
+    }
+    cancelPendingStart()
     stopping = true
     active = false
     micPaused = false
@@ -1339,7 +1457,7 @@ export function createDoubaoVoice(opts = {}) {
    * @returns {boolean} 是否已把 commit 帧发给服务端
    */
   function commit() {
-    if (disposed || !active) return false
+    if (disposed || !active || !ready) return false
     if (!ws || ws.readyState !== 1) return false
     // PTT 快速点击时可能仍有连接建立瞬间暂存的音频：先补齐再 commit
     flushPendingAudio()
@@ -1378,6 +1496,7 @@ export function createDoubaoVoice(opts = {}) {
   /** 释放全部资源（幂等）。 */
   function dispose() {
     if (disposed) return
+    cancelPendingStart()
     active = false
     starting = false
     stopping = false

@@ -1,0 +1,56 @@
+TAP version 13
+# Subtest: an environment text key cannot be rebound by saving a new origin with a different key or clear
+not ok 1 - an environment text key cannot be rebound by saving a new origin with a different key or clear
+  ---
+  duration_ms: 164.229564
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:231:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:238:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: environment voice credentials cannot revive on a new saved origin
+not ok 2 - environment voice credentials cannot revive on a new saved origin
+  ---
+  duration_ms: 106.933654
+  type: 'test'
+  location: '/path/to/ava-english-tutor/test/recovery-backend.test.mjs:246:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    200 !== 400
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 200
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///path/to/ava-english-tutor/test/recovery-backend.test.mjs:255:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1885.147362

@@ -4,10 +4,14 @@
   "private": true,
   "type": "module",
   "description": "Ava — AI 数字人英语老师：实时语音对话、口语跟读评分、单词闯关",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "node server.js --open",
     "dev": "node server.js",
-    "test": "node --test test/api.test.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node scripts/check-syntax.mjs",
     "test:e2e": "node test/e2e.mjs",
     "test:ui": "node test/ui.mjs"
   }

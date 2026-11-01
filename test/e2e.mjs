@@ -2549,13 +2549,12 @@ async function main() {
           expectEqual(JSON.stringify(got.json.interests), JSON.stringify(['摄影', '旅行', '人工智能']), 'GET 应读到最新兴趣')
         })
 
-        await check('知识库上传 5 类文件（txt/md/docx/pdf/png）→ 切块/标题/语言/列表/删除', async () => {
+        await check('知识库上传 4 类跨平台文档（txt/md/docx/pdf）→ 切块/标题/语言/列表/删除', async () => {
           const files = [
             ['english-article.txt', 'txt'],
             ['english-notes.md', 'md'],
             ['fixture-doc.docx', 'docx'],
             ['test-pdf.pdf', 'pdf'],
-            ['ocr-test.png', 'png'],
           ]
           for (const [name, kind] of files) {
             const r = await upload(name, await fixture(name))
@@ -2569,19 +2568,40 @@ async function main() {
           }
           const list = await kbList()
           expectStatus(list, 200)
-          expectTrue(list.json.docs.length >= 5, `列表应有 ≥5 篇（实际 ${list.json.docs.length}）`)
-          expectTrue(list.json.stats.docs >= 5 && list.json.stats.chunks >= 5, 'stats 应统计 docs/chunks')
+          expectTrue(list.json.docs.length >= files.length, `列表应有 ≥${files.length} 篇（实际 ${list.json.docs.length}）`)
+          expectTrue(list.json.stats.docs >= files.length && list.json.stats.chunks >= files.length, 'stats 应统计所有成功导入的 docs/chunks')
           const detail = await jfetch(api(`/api/kb/${docs.docx}`))
           expectStatus(detail, 200)
           expectTrue(Array.isArray(detail.json.doc.chunks) && detail.json.doc.chunks.length >= 1, '详情应含 chunks')
           expectTrue(detail.json.doc.chunks[0].text.length > 10, 'chunk 文本非空')
-          const del = await jfetch(api(`/api/kb/${docs.png}`), { method: 'DELETE' })
+          const del = await jfetch(api(`/api/kb/${docs.docx}`), { method: 'DELETE' })
           expectStatus(del, 200, 'DELETE 知识库文档')
-          const gone = await jfetch(api(`/api/kb/${docs.png}`))
+          const gone = await jfetch(api(`/api/kb/${docs.docx}`))
           expectStatus(gone, 404, '删除后详情 404')
-          const delAgain = await jfetch(api(`/api/kb/${docs.png}`), { method: 'DELETE' })
+          const delAgain = await jfetch(api(`/api/kb/${docs.docx}`), { method: 'DELETE' })
           expectStatus(delAgain, 404, '重复删除 404')
-          delete docs.png
+          delete docs.docx
+        })
+
+        await check('图片 OCR 平台契约：macOS 真提取，其他系统明确拒绝且不污染知识库', async () => {
+          const before = await kbList()
+          const r = await upload('ocr-test.png', await fixture('ocr-test.png'))
+          if (process.platform !== 'darwin') {
+            expectStatus(r, 400, '非 macOS 明确报告不支持图片 OCR')
+            expectEqual(r.json.ok, false)
+            expectMatch(String(r.json.error), /OCR.*macOS|macOS.*OCR/i, '错误应解释实际平台限制')
+            const after = await kbList()
+            expectEqual(after.json.docs.map((d) => d.id), before.json.docs.map((d) => d.id), '失败的 OCR 不能创建空文档')
+            return
+          }
+          expectStatus(r, 200, 'macOS 图片 OCR')
+          expectEqual(r.json.ok, true)
+          expectTrue(r.json.doc.chunkCount >= 1, '图片提取结果必须包含文本块')
+          const detail = await jfetch(api(`/api/kb/${r.json.doc.id}`))
+          expectStatus(detail, 200)
+          expectTrue(detail.json.doc.chunks.some((c) => c.text.length > 10), 'OCR 结果不得为空壳')
+          const removed = await jfetch(api(`/api/kb/${r.json.doc.id}`), { method: 'DELETE' })
+          expectStatus(removed, 200)
         })
 
         await check('知识库上传错误路径：空内容/不支持格式/空 base64 → 中文 400', async () => {
@@ -2712,11 +2732,16 @@ async function main() {
           expectTrue(mock.chatCalls.length >= 1, 'mock 应收到主回复请求')
           const mainCall = mock.chatCalls[mock.chatCalls.length - 1]
           const system = mainCall.body.messages[0].content
-          expectMatch(system, /Knowledge base material/i, 'system prompt 应注入知识库材料')
-          expectMatch(system, /grounded/i, 'system prompt 应含 grounded 规则')
-          expectMatch(system, /《|Slow Reading|slow reading/i, 'system prompt 应含材料标题/片段')
-          expectMatch(system, /LENS|identity is a LENS/i, 'system prompt 应含身份=视角规则')
-          expectMatch(system, /Director's plan/i, 'system prompt 应注入导演计划')
+          expectMatch(system, /MATERIAL LESSON/i, 'grounded 必须使用资料教学协议')
+          expectTrue(system.includes('The Art of Slow Reading'), 'system prompt 必须包含所选网页标题')
+          expectTrue(system.includes('Slow reading is a lost art.'), 'system prompt 必须包含真实网页原句')
+          expectTrue(system.includes('The quick brown fox jumps over the lazy dog.'), 'system prompt 必须包含另一份所选文档原句')
+          expectMatch(system, /teach ONLY this material/i, '只教所选资料的约束不能丢')
+          expectMatch(system, /off-topic.*redirect/i, '资料课离题时必须回到材料')
+          expectMatch(system, /ONE sentence at a time/i, '逐句教学约束不能丢')
+          expectTrue(system.includes('<<<FEEDBACK>>>'), '结构化教学反馈协议必须保留')
+          expectMatch(system, /You are Elena/, '资料模式仍应保持所选老师身份')
+          expectTrue(!/Director's plan/i.test(system), '资料课不能注入自由聊天导演计划')
           const done = events.find((e) => e.event === 'done')
           expectTrue(done && String(done.data.fullReply).length > 5, '回复非空')
         })
@@ -2729,6 +2754,8 @@ async function main() {
           const mainCall = mock.chatCalls[mock.chatCalls.length - 1]
           const system = mainCall.body.messages[0].content
           expectMatch(system, /diverge|springboard|beyond the material/i, 'system prompt 应含发散规则')
+          expectMatch(system, /LENS|identity is a LENS/i, '发散模式保留身份视角')
+          expectMatch(system, /Director's plan/i, '发散模式保留导演计划')
           const done = events.find((e) => e.event === 'done')
           expectTrue(done && String(done.data.fullReply).length > 5, '发散回复非空')
         })

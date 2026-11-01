@@ -2942,6 +2942,15 @@ function shouldShowOnboarding() {
   }
 }
 
+/** 主界面的设置入口复用完整配置表单；返回路径固定为 /mobile。 */
+function openLinkedSettings() {
+  const params = new URLSearchParams(location.search)
+  if (params.get('settings') !== '1') return false
+  $$('[data-return-mobile]').forEach((link) => { link.hidden = false })
+  openSettings()
+  return true
+}
+
 function showOnboarding() {
   if (!D.onboarding) return
   D.onboarding.hidden = false
@@ -3187,7 +3196,9 @@ async function boot() {
     D.btnUnfold.hidden = true
   }
 
-  if (shouldShowOnboarding()) {
+  if (openLinkedSettings()) {
+    // 从主界面进入配置时直接显示设置，首次使用引导不覆盖配置表单。
+  } else if (shouldShowOnboarding()) {
     showOnboarding()
   } else if (!A.sttSupported) {
     D.micHint && (D.micHint.textContent = '当前浏览器不支持语音识别，请用输入框')

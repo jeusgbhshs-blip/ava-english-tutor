@@ -1,0 +1,642 @@
+[
+  {
+    "path": "test/mock-volc-realtime.mjs",
+    "size": 15566,
+    "sha256": "42dc5ba54dcf3cc2541843a89404b05a0de773cbe9c1d8ff5d785468ec68bbf9"
+  },
+  {
+    "path": "test/ui.mjs",
+    "size": 384298,
+    "sha256": "ba4b9a384fb9116e9c8bb9ec676b72aebe891a84ba95fa96cd5698a828d63c31"
+  },
+  {
+    "path": "test/e2e.mjs",
+    "size": 204043,
+    "sha256": "69ad89c5aac68cd092e43fa0b22b103f3f6642998c7f5c15918f06eeba55db8f"
+  },
+  {
+    "path": "test/api.test.mjs",
+    "size": 191393,
+    "sha256": "b491d60e9504b798b9463fe69d0b4c3cddd73722572a7eaabed06261ae3e02ba"
+  },
+  {
+    "path": "test/fixtures/empty.txt",
+    "size": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "test/fixtures/unsupported.exe",
+    "size": 30,
+    "sha256": "299726535db481a8a473db1c08eabbe3259d9981c3fa1863d2bec55d0ced68d5"
+  },
+  {
+    "path": "test/fixtures/english-notes.md",
+    "size": 399,
+    "sha256": "64ea7ad49d607c53444c9f2b754821da29021e027b922844554515c81ab99f51"
+  },
+  {
+    "path": "test/fixtures/ocr-test.png",
+    "size": 29376,
+    "sha256": "f5e7bf1a4b7d799a7272c8e3e2f9d363dbc6e4a7a6dc5dbc02a8df4681a75f31"
+  },
+  {
+    "path": "test/fixtures/english-article.txt",
+    "size": 234,
+    "sha256": "b530d31af7f52e5b6dd8f688e775c05b3a42f73b10e1c777f1b93d3317a2891f"
+  },
+  {
+    "path": "test/fixtures/test-pdf.pdf",
+    "size": 14947,
+    "sha256": "8529a36094afb111d68aec8cc9b2a1ca91f31ca63d1f7683225a14f31dd3b0f8"
+  },
+  {
+    "path": "test/fixtures/scanned-image-only.pdf",
+    "size": 518,
+    "sha256": "a006106a349f231cdf36c68e97ed8386f5e368ead4f6c4f4af338c0bf43bb3bf"
+  },
+  {
+    "path": "test/fixtures/fixture-slides.pptx",
+    "size": 1235,
+    "sha256": "fb246a297b5d5e34e6ead2a1b63d8ef27452f175fa9c7ade4fff4a403d4c71ab"
+  },
+  {
+    "path": "test/fixtures/fixture-doc.docx",
+    "size": 3642,
+    "sha256": "81cbf55d317ac359c1f645c80f89a835a40fa45a0f274f5e74da7bbb03471330"
+  },
+  {
+    "path": "test/mock-upstream.mjs",
+    "size": 36482,
+    "sha256": "c128b5719dff350b53815caef6cee568040439fcc160a900059e2758a9fee18c"
+  },
+  {
+    "path": "start.command",
+    "size": 847,
+    "sha256": "e08400a2ffb5f4cf1b6a2b53477b3a4612f829a0d5d7faf72dbf80918450715a"
+  },
+  {
+    "path": "server.js",
+    "size": 65026,
+    "sha256": "5e9c69d8d59ecb22b709231aad3d35e4b4c44df018f7b047926c1f78e45b98f3"
+  },
+  {
+    "path": "web/index.html",
+    "size": 33579,
+    "sha256": "4056aa36cbc821111404bc9fca03fa82a2172323c4c84cfb7150b5a679ab5b89"
+  },
+  {
+    "path": "web/css/review.css",
+    "size": 61021,
+    "sha256": "4b36e4ca8b3bf03a5c23d84bd2e98ff91cd5bf706bf329cc51e03a117a5bb939"
+  },
+  {
+    "path": "web/css/library.css",
+    "size": 5290,
+    "sha256": "80780177a63a777ee15ffca88da1fb6d4ff181c1538ab36944d5df4836e8cbef"
+  },
+  {
+    "path": "web/css/app.css",
+    "size": 94760,
+    "sha256": "d6b6a6fabb46a9f3223b0da4a7052c94eb981d73d3b31f027957d66d242d254e"
+  },
+  {
+    "path": "web/css/glass.css",
+    "size": 31241,
+    "sha256": "0c68bc9ea4f4d13217ebcc41148832ffef2aab524fd5438950dc64699c974dce"
+  },
+  {
+    "path": "web/css/mobile.css",
+    "size": 125255,
+    "sha256": "4ab69adc435ca29fc0a10722e10190c5f13819f6a58ff9e9277a736563ffb2ab"
+  },
+  {
+    "path": "web/css/call-redesign.css",
+    "size": 15101,
+    "sha256": "540b53ced48e59cd053ee3f620383b911f99779c11dd52c3331b5f063319c9f5"
+  },
+  {
+    "path": "web/js/ui.js",
+    "size": 28811,
+    "sha256": "cae760e3cf9243bcdad9b2f538dde4e5bc7afbd2c96fdc0ff2a15db482d0605c"
+  },
+  {
+    "path": "web/js/modes.js",
+    "size": 87105,
+    "sha256": "5a70f2138b4b521a3efd706e26d03bcaf3e31b833693e75c5a2192dd1f157c51"
+  },
+  {
+    "path": "web/js/talking-head.js",
+    "size": 31257,
+    "sha256": "d168eda257ca09ba0616fc2ebe00d616d2233bf00b0fe9587db3395eadaa631f"
+  },
+  {
+    "path": "web/js/doubao-voice.js",
+    "size": 49825,
+    "sha256": "3e9156be6856581c5400e3e4c13b6b97b6662319f66215c9ed0207af2ea32616"
+  },
+  {
+    "path": "web/js/store.js",
+    "size": 35140,
+    "sha256": "2bf7e50823a1aa49a66cf49675bf19442a439aeeca45b7f73cb52281c20f68da"
+  },
+  {
+    "path": "web/js/speech.js",
+    "size": 48354,
+    "sha256": "8272af6050c9971bf96604fc013fd3c48407d6afc4bc2b05d3b4e7b7d78ed4fb"
+  },
+  {
+    "path": "web/js/main.js",
+    "size": 108615,
+    "sha256": "0faed4b4c69e0d3420c4d02d64900b280875fc938ae3eac7ae9df5b18995bf86"
+  },
+  {
+    "path": "web/js/mobile/review.js",
+    "size": 94519,
+    "sha256": "e61679f6df72219f01f461d4c5b1994c13659c6858ee20ac94c107e2fbb2a8c5"
+  },
+  {
+    "path": "web/js/mobile/games.js",
+    "size": 9685,
+    "sha256": "bc1de4c6f013296950048f52604d4cdfcdebbcb38fdf973b52c0b55a6d080a74"
+  },
+  {
+    "path": "web/js/mobile/core.js",
+    "size": 19403,
+    "sha256": "5e7ed13b585e56db957c7735922becf73fcfa3ec79e0b2450922801dccda0d22"
+  },
+  {
+    "path": "web/js/mobile/library.js",
+    "size": 16263,
+    "sha256": "d5f80213fa8f697aebeb8cc9ebe5e417344852bfeaaa0b40faf6ed1742795760"
+  },
+  {
+    "path": "web/js/mobile/call.js",
+    "size": 154874,
+    "sha256": "31f52c46136d01ab03956ebb0d6659dc16961bd520aa76b400b66e58c3992e5b"
+  },
+  {
+    "path": "web/js/mobile/screens.js",
+    "size": 68657,
+    "sha256": "e6e3011a4e4b803ca0a229c90667e5c1d0f334fe19daa6262713305ee5e4aea9"
+  },
+  {
+    "path": "web/js/mobile/kb.js",
+    "size": 31364,
+    "sha256": "77c2feec1a594a2f058c93723ddf3fa6599f8aa52d3db75d37366363230f7953"
+  },
+  {
+    "path": "web/js/mobile/voice-audio.js",
+    "size": 15833,
+    "sha256": "1d505380e2a1fb24c891d3bca4cb495e447b2697de838e367d4e87190f6270c6"
+  },
+  {
+    "path": "web/js/mobile/book-library.js",
+    "size": 35698,
+    "sha256": "67419729edc711bd4931c3385c723e0c83972a034c1d903d0a69ce9328f2e70a"
+  },
+  {
+    "path": "web/js/mobile/app.js",
+    "size": 19642,
+    "sha256": "f2037fb08bdfc3d26511f2748e00a6cce5e33d330525f50b82f364ab1b1a5729"
+  },
+  {
+    "path": "web/js/pcm-worklet.js",
+    "size": 3556,
+    "sha256": "05e7c7b66804e7c3bdbfe2e0ba0499f98cb05bb33c52c6ce38a2c115e118a118"
+  },
+  {
+    "path": "web/js/api.js",
+    "size": 100310,
+    "sha256": "2e97770c77578da65b42df0a2cfccfcc7aebc31c921ff489d7e0e8eaaa63c266"
+  },
+  {
+    "path": "web/mobile.html",
+    "size": 19496,
+    "sha256": "c92d4714fe36643c669d353a6795cda281d2a5aa39feb5717cd3d894d404fea2"
+  },
+  {
+    "path": "web/avatar/preview.html",
+    "size": 46566,
+    "sha256": "60deea06c307add13f9e7144f608ac165a6d5db8abdf31b188d420efde7609ea"
+  },
+  {
+    "path": "web/avatar/avatar.js",
+    "size": 67156,
+    "sha256": "e8a0150a97dce2cf3321da0c9a49710ebdb468386708df811297feb439d34b40"
+  },
+  {
+    "path": "web/avatar/avatar.css",
+    "size": 25682,
+    "sha256": "42d0b376fcb159fa62560e8a2fcfccdee91a27944ec9c229a2e84e0c9d2b4a2e"
+  },
+  {
+    "path": "web/manifest.webmanifest",
+    "size": 788,
+    "sha256": "c2688bd90d33c2f39780ab9809a4b5feab6ee34144cc11f1f1d20030fab6a1f8"
+  },
+  {
+    "path": "web/assets/icons/512.png",
+    "size": 217548,
+    "sha256": "b9d7c735b8a3f3e0f551d63bf0b4ca1fccf01620080f6b83b169718a99556927"
+  },
+  {
+    "path": "web/assets/icons/192.png",
+    "size": 40671,
+    "sha256": "27099e1c269bdf73606f8fef58971e588dff1dec8c7580481e6afa23d4381877"
+  },
+  {
+    "path": "web/assets/characters/hikari.svg",
+    "size": 29810,
+    "sha256": "55f0bf68bcee9f83a1b9b77beb023288b118a21f636b9b4021218c939f75213c"
+  },
+  {
+    "path": "web/assets/characters/maya.svg",
+    "size": 30580,
+    "sha256": "d5bff9a9c7c6ef3261842232a84f72f2d9ed9a748fc9ecd8766a0285cb096196"
+  },
+  {
+    "path": "web/assets/characters/motion.json",
+    "size": 5818,
+    "sha256": "9ab4fcfa4e057eced3f31eadf2980b23d0bf093130a14643123021bc0102bb3b"
+  },
+  {
+    "path": "web/assets/characters/layers/elena-bg.webp",
+    "size": 34232,
+    "sha256": "e6ba53ef4b5753b052e583d4c2ac31a346411d78044677dd9089faafed7c5a00"
+  },
+  {
+    "path": "web/assets/characters/layers/hikari-bg.webp",
+    "size": 28642,
+    "sha256": "4ff328091fb7530c262f4fa02b2125d91d802d12df4f0f2838d05727fecae69c"
+  },
+  {
+    "path": "web/assets/characters/layers/hikari-fg.webp",
+    "size": 132082,
+    "sha256": "902f53e58d85bf084785313706a477b634ebeada7efffb224b56b61860c8cf41"
+  },
+  {
+    "path": "web/assets/characters/layers/elena-fg.webp",
+    "size": 160268,
+    "sha256": "317df6336d3ba47afefe1826be535f3fd584ed2e6313033484fd22becac2b0bd"
+  },
+  {
+    "path": "web/assets/characters/layers/maya-bg.webp",
+    "size": 103438,
+    "sha256": "bc5c974e52ad1bc283915543d92c0b0e4d4d90936a1c52e5d382304abf05b065"
+  },
+  {
+    "path": "web/assets/characters/layers/maya-fg.webp",
+    "size": 100108,
+    "sha256": "9500c860dfcdb00cf5276519f2c3321b60684cf93acbb90e5c968005baa8827e"
+  },
+  {
+    "path": "web/assets/characters/elena.jpg",
+    "size": 588072,
+    "sha256": "5c6b2f0ff942cd5ec115d8744c3d724cacb90138c1f4d9a2623e137540ff6907"
+  },
+  {
+    "path": "web/assets/characters/elena.svg",
+    "size": 32026,
+    "sha256": "77bee4d1a189d4a1fbaa12fad0a613f4bc20aae57939c520da98a26fe814e156"
+  },
+  {
+    "path": "web/assets/characters/maya.jpg",
+    "size": 642757,
+    "sha256": "a5fd657416deb7870f25c4b01a8c87989e73e04f0d537e1effb712dd83c03947"
+  },
+  {
+    "path": "web/assets/characters/hikari.jpg",
+    "size": 271135,
+    "sha256": "bd0044c9b0fff8319fb0df9eda37418dc5ff574c1693fb3334765f5fac48cdda"
+  },
+  {
+    "path": "web/assets/app-icon.svg",
+    "size": 4024,
+    "sha256": "23f415a51e2497862817d2944e6c048fffdd4f1815275ea5e28376f0fe347f9e"
+  },
+  {
+    "path": "web/design-preview/option-c.html",
+    "size": 3423,
+    "sha256": "fd8ceb36bbf8f84723742bc45c1430e376454c039f865777fcfd18a044c97026"
+  },
+  {
+    "path": "web/design-preview/option-b.html",
+    "size": 3872,
+    "sha256": "66f381b3a10c5b72c3116aa6a1e1a850e6435550f3610719c8c13f672c162be1"
+  },
+  {
+    "path": "web/design-preview/import-review.html",
+    "size": 10425,
+    "sha256": "4545679861b99f5186b5a0ee2a492baaef96cb81a22d3288141d12728f326961"
+  },
+  {
+    "path": "web/design-preview/option-a.html",
+    "size": 3158,
+    "sha256": "901cdd77fda2b3e90324bb9010af7eb8d8b7f92ec61cb31caaced727114743f6"
+  },
+  {
+    "path": "web/design-preview/base.css",
+    "size": 4044,
+    "sha256": "1917650d9b501890360ccd5a3a1765657f8bfb5a9f11cb4a289e8e652ca7fb48"
+  },
+  {
+    "path": "web/design-preview/docs-follow.html",
+    "size": 8008,
+    "sha256": "eba017cb1bd4d984dc164c836b4523d6ffbebc515865b63b05cbade59eb1e0be"
+  },
+  {
+    "path": "content/prompts.js",
+    "size": 47730,
+    "sha256": "9e8b996b592a57ccdb0261a3490d02fe776e1b7801021d17f2bc8836dbbbfc75"
+  },
+  {
+    "path": "content/openers.js",
+    "size": 2374,
+    "sha256": "df870c35416cffaeb66a268c64e2bb4baedd150f826fd6d9c95e2d6d8b4dbcf1"
+  },
+  {
+    "path": "content/scenarios.js",
+    "size": 14801,
+    "sha256": "8bdfc873b583993f750ae1934fca983e3dd531853991c0cd6e5e460320e267e3"
+  },
+  {
+    "path": "content/index.js",
+    "size": 1679,
+    "sha256": "f78c1c7c65a28a4dcb6fe9f8d5ec3e9328f2bddb147ab7d3f86d14049d514975"
+  },
+  {
+    "path": "content/vocab.js",
+    "size": 9215,
+    "sha256": "9d86d01d593e628dcdd73cdd10f686f6e31aaf78c721e8bfd483e9465b626978"
+  },
+  {
+    "path": "content/demo.js",
+    "size": 54895,
+    "sha256": "15c180770c2241cb018abc61759582131df1a476d12f92eac2ac36b550cf1551"
+  },
+  {
+    "path": "content/characters.js",
+    "size": 6913,
+    "sha256": "d887d06962d4b05badffbf8e7b8711143ef2adf0941641357900026b222e1bb8"
+  },
+  {
+    "path": "PACKAGE-README.txt",
+    "size": 374,
+    "sha256": "8634deddff42a105d7e61bce456a9de6e65fc076ddf94462ca8073eb763f823e"
+  },
+  {
+    "path": "docs/handover/13-GLOSSARY.md",
+    "size": 1641,
+    "sha256": "4d73ed21d85595fef3d64b221a5d7d84341fd5310afdda3305339451f60c8b97"
+  },
+  {
+    "path": "docs/handover/07-FRONTEND-MOBILE.md",
+    "size": 7967,
+    "sha256": "5e51a277f511b0a2083159766e0b2af38721c5330a20e2dab41abeebab51fe1e"
+  },
+  {
+    "path": "docs/handover/08-COURSE-REVIEW-GAMES.md",
+    "size": 5127,
+    "sha256": "028543d746ce50fedd5a789a59ef9c9a5944ebc5e1228bd8102183458cdd7f82"
+  },
+  {
+    "path": "docs/handover/05-API-REFERENCE.md",
+    "size": 8669,
+    "sha256": "e53dc9f0aa6138b0ad59b81486115ec71b670ad017c4f707731b5c213dd0ff91"
+  },
+  {
+    "path": "docs/handover/11-KNOWN-ISSUES.md",
+    "size": 4175,
+    "sha256": "555e5e50270ac2c7c8fb8aae3ce7734f12b0a1342dd1a68c6b09eb54e6f4d0b4"
+  },
+  {
+    "path": "docs/handover/10-TESTING-OPS.md",
+    "size": 4540,
+    "sha256": "4f1beafaeaab310c4f8442f151ccca05f9a779b33f8a99de8a59f8776dc92108"
+  },
+  {
+    "path": "docs/handover/12-CODE-TOUR.md",
+    "size": 5451,
+    "sha256": "08bc893a6ba539740b82bbe857ff46fe9abbe81baa20a49365aac1d4c3641a18"
+  },
+  {
+    "path": "docs/handover/14-PACKAGE-CONTENTS.md",
+    "size": 1577,
+    "sha256": "579addecf02c9a0326a591ea8e6bb87d00e8d275d5212ba05dd345f433ddcd79"
+  },
+  {
+    "path": "docs/handover/04-KB-AND-LIBRARY.md",
+    "size": 7643,
+    "sha256": "9417a89facb495204b1862292abf34bcc949381eddcb28d740027da18a70fb98"
+  },
+  {
+    "path": "docs/handover/09-LLM-PROMPTS.md",
+    "size": 4959,
+    "sha256": "46bbab49374f6a35c1055047d05979906ac7393f725785fb57807b2b07ff8025"
+  },
+  {
+    "path": "docs/handover/01-ARCHITECTURE.md",
+    "size": 7390,
+    "sha256": "44d143472e3f2f3c0e606ce931ad8b212e61b01c5ba1b239ac9d1049a6dcf540"
+  },
+  {
+    "path": "docs/handover/examples/plan.example.json",
+    "size": 1723,
+    "sha256": "0277f0a6b3fac4aa17293cdecb61fd472dd399de6b6e1a986f25e4cf2451458d"
+  },
+  {
+    "path": "docs/handover/examples/library-progress.example.json",
+    "size": 663,
+    "sha256": "b3b77de217134357084e3867f11f48312f0924b97a4de8e6387c94e46ef0f411"
+  },
+  {
+    "path": "docs/handover/examples/settings.example.json",
+    "size": 556,
+    "sha256": "9d0d6fcae8c1ec576a88886b1036297555d0968c5354b0eaa5a735190426d43a"
+  },
+  {
+    "path": "docs/handover/examples/review.example.json",
+    "size": 505,
+    "sha256": "38cb4303b457951d0e229782a5cd8f89489951c87248143f8a43654ba0e51538"
+  },
+  {
+    "path": "docs/handover/02-MODULE-MAP.md",
+    "size": 11441,
+    "sha256": "b070bd64a04b5e1f4b84bc15c4ff27c7a53169a1c84479e21cb20586cebef1f6"
+  },
+  {
+    "path": "docs/handover/SOURCE-MANIFEST.md",
+    "size": 8825,
+    "sha256": "6116a1ed1745d6276f599e1d4d0fcd62da61df77a55e4f536f52bb4a30c70313"
+  },
+  {
+    "path": "docs/handover/03-VOICE-PIPELINE.md",
+    "size": 9033,
+    "sha256": "03316522bab7401c8206cb5e9aeb26cfe11040ffdac1c84ed47078e2f3b7cbd2"
+  },
+  {
+    "path": "docs/handover/HANDOVER.md",
+    "size": 5167,
+    "sha256": "36ba267483641d11fbbab7725ff52a8d871dd465b7a99f8d8dbf2c0af4574645"
+  },
+  {
+    "path": "docs/handover/06-DATA-MODEL.md",
+    "size": 6725,
+    "sha256": "534be73d47ab6c82581e8cc249a3a343e805af04abd3188d538b50656ea551a1"
+  },
+  {
+    "path": "docs/使用说明.md",
+    "size": 36554,
+    "sha256": "32e2a536f68d385165a68f109325bed43fc9cfb20900b7be09c42d01f71b5683"
+  },
+  {
+    "path": "docs/测试报告.md",
+    "size": 90524,
+    "sha256": "e58af89e86ce250d4e1046331e2df0773d017f5d9a6b252d3f7a8c17b3bd8e03"
+  },
+  {
+    "path": "README.md",
+    "size": 53493,
+    "sha256": "de762437ca908fcf3add7dcdb2bc83979169a4a2ed169aa89342317c9ff062a2"
+  },
+  {
+    "path": ".gitignore",
+    "size": 74,
+    "sha256": "5a3db81926c6d6ce88c175f49e13390e9fc920be7baf28f1a3733c88ef66f77c"
+  },
+  {
+    "path": "package.json",
+    "size": 408,
+    "sha256": "dba8e74a30c170f2c6bf61a3d20bc340a6edc942fdc1494452f88cd5e300ddd2"
+  },
+  {
+    "path": "scripts/share.sh",
+    "size": 1850,
+    "sha256": "4d577cc54df644691705362d58e2b0de5f0174786ba59d4ecf85928fd35ca42f"
+  },
+  {
+    "path": "lib/lessonGen.js",
+    "size": 5296,
+    "sha256": "496997ef0c4e2511cc2087acd5abc279f66bd5b968fdddf613810cc9366185bc"
+  },
+  {
+    "path": "lib/assistant.js",
+    "size": 10896,
+    "sha256": "2a111ce5f5e06b43ab15132d41f7a57ca4a31380e10799ba501ab9dbd5294923"
+  },
+  {
+    "path": "lib/volcProtocol.js",
+    "size": 8278,
+    "sha256": "bf90d32b2ab0922b99ccda5821886d7a90378f4ac7f9fa952570b5c32fb2b356"
+  },
+  {
+    "path": "lib/review.js",
+    "size": 10665,
+    "sha256": "4d4a10ee0433d3ae2cf3aa6d60342ace8fedc536bc66566730cc4c1e753e5944"
+  },
+  {
+    "path": "lib/docExtract.js",
+    "size": 15539,
+    "sha256": "944fcfdf144e32e3b262be23d36e12e3dcb2beb7cf26907cd89939def8a81f84"
+  },
+  {
+    "path": "lib/llm.js",
+    "size": 10000,
+    "sha256": "4da2596dd59d452c17856d3c54a7d0b392fe18b85f1f390c1c1d7143421145cf"
+  },
+  {
+    "path": "lib/tts.js",
+    "size": 9987,
+    "sha256": "c944d4bded0c998b0cc53d878090d0b411b4ebdd0869427c717612ae370a0f77"
+  },
+  {
+    "path": "lib/memory.js",
+    "size": 5587,
+    "sha256": "2ea1c229442135eef267bd8a2d81eeced41fbb0c09ffad50b5aa280f83f538d5"
+  },
+  {
+    "path": "lib/volcRealtime.js",
+    "size": 13440,
+    "sha256": "9d411a89b1b21f11aeb75cf2ac321c1c10d0eabbd35296722d48c1d0de78e106"
+  },
+  {
+    "path": "lib/srs.js",
+    "size": 2524,
+    "sha256": "1e5462afea6f71a181dbff0dc58a717d427b9ae0846a5ab8c7a2196a13c1cdff"
+  },
+  {
+    "path": "lib/config.js",
+    "size": 8289,
+    "sha256": "27f8238cea8e784cd7f7f9d7d259b8e171d64c039e48914d2fb23cc2c3b99338"
+  },
+  {
+    "path": "lib/coach.js",
+    "size": 4143,
+    "sha256": "d3fa7d5b2b0c8198a797e216e93a15bac8899581a0ed71664ee30cd51b068d05"
+  },
+  {
+    "path": "lib/director.js",
+    "size": 4065,
+    "sha256": "4d11b466b46599a6489ed176c0b1445d65b31569510d37363fafccd9e72ae26e"
+  },
+  {
+    "path": "lib/docStore.js",
+    "size": 4167,
+    "sha256": "7505a59aaaeb54c6abd24b72ad0ce210c6f7e6455b3c81aa425847b44bf951f4"
+  },
+  {
+    "path": "lib/translator.js",
+    "size": 7848,
+    "sha256": "770d9a3190cad89e26a9a6626f33d7ecc05ec32331eda69603c54fa39340e06f"
+  },
+  {
+    "path": "lib/progress.js",
+    "size": 4958,
+    "sha256": "010255191266e998095e7bc47df1823fdabdf49ac714a9632c0b8114e0b98dff"
+  },
+  {
+    "path": "lib/score.js",
+    "size": 9906,
+    "sha256": "9a224280ac874460ba7bd680ff5e022aef7ff89af00806d90712877b6115589d"
+  },
+  {
+    "path": "lib/kb.js",
+    "size": 19037,
+    "sha256": "792eb20a93feb0f2942133c708132dfabdf7a23e876ffd4af4aa2a9c5161808f"
+  },
+  {
+    "path": "lib/llmJson.js",
+    "size": 2395,
+    "sha256": "c3c73fdb0c0abb951e1c0acc4654b014e403d65d99a9332ea1a4474c0eaff556"
+  },
+  {
+    "path": "lib/wsServer.js",
+    "size": 6711,
+    "sha256": "586f544027447090e5e22dddcf93d69d51eb47a0710b4d4874c40bd825a05047"
+  },
+  {
+    "path": "lib/summary.js",
+    "size": 7377,
+    "sha256": "6ec3ab2d37be2a886cd52c6276577b6740abcbd9fcfeddb7de80c38d7e947dfe"
+  },
+  {
+    "path": "lib/wordbook.js",
+    "size": 5877,
+    "sha256": "a3405c48e4b36cf363437f0b65f668d909c005b0d1ca60bc64babf945ff37e72"
+  },
+  {
+    "path": "lib/plans.js",
+    "size": 15383,
+    "sha256": "ca272411429f131b06a3baa9e7e61961da6a8fb9676606435a94b2ecebd06535"
+  },
+  {
+    "path": "lib/docAnalysis.js",
+    "size": 5777,
+    "sha256": "40fc2a68ec34eb73aadeeacb0af0c6f08ab44037f97cb05607e8c8af98b0eec7"
+  },
+  {
+    "path": "SPEC.md",
+    "size": 58474,
+    "sha256": "5a86371ff2dfacf2d4b4af69727a523891290988597cc06d6dc276631855c898"
+  }
+]

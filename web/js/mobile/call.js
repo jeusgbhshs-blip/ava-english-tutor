@@ -2014,10 +2014,7 @@ async function ensureVolc() {
         onReady(info) {
           if (!volcCallbacksValid()) return
           C.engine = 'volc'
-          if (C.ptt === 'connecting') {
-            setPttState('recording')
-            setState('listening')
-          }
+          // startPaused 仍未上行；由 startPtt 在 start + resumeMic 成功后统一进入录音并启用看门狗。
           if (info && info.character && info.character.name && D.name) D.name.textContent = info.character.name
           if (info) {
             const hits = extractKbHits(info)
