@@ -1,5 +1,7 @@
 # Ava 本轮恢复修复、验证与交接
 
+> 历史轮次说明：本文件记录首次源码恢复时的状态。用户随后明确了个人端产品方向；部分待办已在个人交互轮次修复。当前结果见 [PERSONAL-INTERACTION.md](../personal/PERSONAL-INTERACTION.md)，当前方向见 [ROADMAP.md](ROADMAP.md)。
+
 日期：2026-11-01。源码包、基线、产品实际完成度见 [REPORT.md](REPORT.md)。本文件记录本轮真正修改和验证过的部分；未实现的事项保留在 [ROADMAP.md](ROADMAP.md)。
 
 ## 1. 交付状态

@@ -2,7 +2,7 @@
 
 Ava 是在本机运行的英语练习网站：选择角色说英语、按个人目标生成三节课、导入资料逐句学习，并在课后总结和复习单词。
 
-**当前阶段：本机单用户试用版。** 本次接手已校验原始交接包、完成前后端与语音链路逆向审查，并修复一批可复现问题。真实云语音、设备兼容和教学效果仍需独立验收；当前没有账号、租户隔离、收费系统或公网服务防护。
+**产品定位：供个人持续使用的本地英语学习空间。** 当前在完整源码恢复基础上，继续打磨语音、资料、复习和个人设置之间的交互。个人交互版本已修复一批异步状态、焦点、返回、输入保留和数据一致性问题；真实云语音、设备兼容和教学效果仍需独立验收。
 
 ## 快速启动
 
@@ -45,7 +45,7 @@ macOS 也可运行 `bash start.command`。`npm start` 会尝试打开浏览器�
 AVA_DATA_DIR=/absolute/path/to/ava-data node server.js --host 127.0.0.1
 ```
 
-当前没有登录、用户隔离、调用配额或完整请求限流。**保持本机使用；公开源码不代表服务已具备公网部署条件。** `scripts/share.sh` 是历史局域网分享入口，访问者会共享整份实例数据和模型额度。
+默认只在本机使用。源码可以公开，运行中的个人实例包含资料与模型凭据，应保持本机访问。`scripts/share.sh` 是历史局域网分享入口，使用它会把同一份个人实例提供给网络中的其他设备。
 
 图片 OCR 依赖 macOS Vision；Linux/Windows 会明确返回不支持。TXT/MD、DOCX/PPTX 与部分 PDF 有本地提取实现；扫描 PDF 当前需先转成图片再在 macOS 导入，复杂排版需检查提取结果。
 
@@ -53,7 +53,7 @@ AVA_DATA_DIR=/absolute/path/to/ava-data node server.js --host 127.0.0.1
 
 ```bash
 npm run check       # 所有随包 JavaScript 的语法检查
-npm test            # 原225项单元测试 + 本轮缺陷回归
+npm test            # 原有单元测试 + 恢复与个人交互回归
 npm run test:e2e    # 真HTTP/WS桥 + 本机假上游，不使用真实模型Key
 npm run test:ui     # 原Chrome/CDP UI套件，需本机Chrome与相应权限
 ```
@@ -64,6 +64,7 @@ GitHub Actions 配置位于 [test.yml](.github/workflows/test.yml)，使用 Node
 
 ## 文档与二次开发入口
 
+- [个人产品方向、交互修复与演示验收](docs/personal/PERSONAL-INTERACTION.md)
 - [本轮深度解析与产品状态](docs/audit/REPORT.md)
 - [已修复项、实测结果与剩余任务](docs/audit/RECOVERY.md)
 - [后续开发与验收路线](docs/audit/ROADMAP.md)
@@ -73,4 +74,4 @@ GitHub Actions 配置位于 [test.yml](.github/workflows/test.yml)，使用 Node
 
 主要模块：`server.js` 负责 HTTP/SSE/WS 入口；`lib/` 负责模型、语音、资料和数据；`content/` 存角色与提示词；`web/js/mobile/` 是主前端；`test/` 存本机测试与假上游。
 
-下一步优先稳定首句/长句语音、建立资料教学游标、统一学习状态与备份，再决定多人服务形态。原始源码校验清单保持在 `docs/handover/SOURCE-MANIFEST.md`，它只描述原交接版本；本轮修改和新增文件见恢复报告。
+下一步优先完成目标设备的真实语音验收、建立资料教学游标、统一学习状态与备份，再逐页打磨个人日常使用的细节。账号、多人租户和会员支付不属于当前产品路线。原始源码校验清单保持在 `docs/handover/SOURCE-MANIFEST.md`，它只描述原交接版本；后续改动见对应轮次报告。

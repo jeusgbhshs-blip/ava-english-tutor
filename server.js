@@ -566,8 +566,40 @@ async function handleApi(req, res, url) {
       return sendJson(res, err.status || 400, { ok: false, error: err.message });
     }
     try {
+      const previousSettings = loadSettings();
       const saved = saveSettingsPatch(body);
-      return sendJson(res, 200, publicSettings(saved));
+      let updatedPlan = null;
+      if (typeof body.level === 'string') {
+        const current = loadPlan();
+        if (current && current.level !== saved.level) {
+          try {
+            updatedPlan = updatePlan(current, { level: saved.level });
+            savePlan(updatedPlan);
+          } catch (err) {
+            // Settings and plans are separate files. If the plan cannot be saved,
+            // restore the settings change rather than report a completed update.
+            try {
+              saveSettingsPatch({ ...previousSettings, clearKey: !previousSettings.apiKey,
+                volc: { ...previousSettings.volc, clearKey: !previousSettings.volc.apiKey && !previousSettings.volc.accessToken },
+              });
+            } catch {
+              throw new Error('课程难度更新失败，设置回退也未完成；请重新读取设置后重试');
+            }
+            throw new Error(`课程难度更新失败，设置已恢复：${err.message}`);
+          }
+          if (updatedPlan.generating) generatePlanLessonsInBackground(updatedPlan.id);
+          updatedPlan = decoratePlan(loadPlan());
+        }
+      }
+      return sendJson(res, 200, { ...publicSettings(saved), ...(updatedPlan ? {
+        planUpdated: true,
+        plan: updatedPlan,
+        message: updatedPlan.hasError
+          ? `难度已保存，课件更新未完成：${updatedPlan.errorMessage}；旧课件和进度已保留`
+          : updatedPlan.generating
+            ? '难度已保存，未完成课件正在更新；已完成课程和进度保留'
+            : '难度已保存；已完成课程和进度保留',
+      } : {}) });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: `保存失败：${err.message}` });
     }
@@ -795,8 +827,8 @@ async function handleApi(req, res, url) {
       if (settingsNow.apiKey) enrichKBInBackground(doc.id, settingsNow);
       return sendJson(res, 200, {
         ok: true,
-        doc: publicKBMeta(doc),
-        message: settingsNow.apiKey ? '校对内容已入库，正在生成检索摘要（后台）' : '校对内容已入库',
+        doc: publicKBMeta(getKBDoc(doc.id) || doc),
+        message: settingsNow.apiKey ? '原文已入库，正在生成摘要；期间也可按原文学习' : '原文已入库，可按原文学习；未配置模型 Key，未生成摘要',
       });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
@@ -825,9 +857,9 @@ async function handleApi(req, res, url) {
       if (settingsNow.apiKey) enrichKBInBackground(doc.id, settingsNow);
       return sendJson(res, 200, {
         ok: true,
-        doc: publicKBMeta(doc),
+        doc: publicKBMeta(getKBDoc(doc.id) || doc),
         extracted: { kind: extracted.kind, chars: doc.chars, warnings: extracted.warnings || [] },
-        message: settingsNow.apiKey ? '已加入知识库，正在生成检索摘要（后台）' : '已加入知识库（未配置模型 Key，跳过摘要增强）',
+        message: settingsNow.apiKey ? '原文已入库，正在生成摘要；期间也可按原文学习' : '原文已入库，可按原文学习；未配置模型 Key，未生成摘要',
       });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
@@ -847,7 +879,9 @@ async function handleApi(req, res, url) {
       const { doc } = await importKBWeb(target);
       const settingsNow = loadSettings();
       if (settingsNow.apiKey) enrichKBInBackground(doc.id, settingsNow);
-      return sendJson(res, 200, { ok: true, doc: publicKBMeta(doc), message: '网页已加入知识库' });
+      return sendJson(res, 200, { ok: true, doc: publicKBMeta(getKBDoc(doc.id) || doc),
+        message: settingsNow.apiKey ? '网页已入库，正在生成摘要；期间也可按原文学习' : '网页已入库，可按原文学习；未配置模型 Key，未生成摘要',
+      });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
     }
@@ -876,7 +910,7 @@ async function handleApi(req, res, url) {
   if (kbEnrichMatch && m === 'POST') {
     try {
       const result = await enrichKBDoc(decodeURIComponent(kbEnrichMatch[1]), loadSettings());
-      return sendJson(res, 200, { ok: true, ...result });
+      return sendJson(res, 200, { ...result, ok: result.ok === true });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: err.message });
     }
@@ -993,7 +1027,7 @@ async function handleApi(req, res, url) {
     if (!current) return sendJson(res, 200, { ok: false, error: '还没有学习计划' });
     const reset = resetPlanForGeneration(current);
     savePlan(reset);
-    generatePlanLessonsInBackground(reset.id);
+    if (reset.generating) generatePlanLessonsInBackground(reset.id);
     return sendJson(res, 200, { ok: true, plan: decoratePlan(reset) });
   }
 
@@ -1461,6 +1495,7 @@ function publicKBMeta(doc) {
     chunkCount: Array.isArray(doc.chunks) ? doc.chunks.length : 0,
     preview: doc.preview,
     enrichStatus: doc.enrichStatus,
+    enrichedChunks: Number(doc.enrichedChunks) || 0,
     createdAt: doc.createdAt,
     meta: doc.meta || {},
   };

@@ -12,3 +12,4 @@ docs/assets/
 *.pem
 *.key
 !docs/audit/evidence/*.log
+!docs/personal/evidence/*.log

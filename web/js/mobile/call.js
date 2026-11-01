@@ -7,12 +7,14 @@
  */
 import {
   $, $$, esc, icon, toast, ui, M, chatStream, api, getJSON, postJSON,
-  translateTexts, fetchSummary, showWordbookSheet, mmss, characterById,
+  translateTexts, fetchSummary, showWordbookSheet, mmss, characterById, saveLocalPlan,
 } from './core.js'
 import { createSTT, tts } from '../speech.js'
 
 const C = {
   open: false,
+  callGeneration: 0,
+  chatGeneration: 0,
   character: null,
   sceneIdx: 0,
   scene: null,
@@ -111,12 +113,55 @@ const C = {
   pttCommitted: false,
   autoReplyNotified: false,
   summaryToken: 0,
+  summarySheetToken: null,
   lastAutoReplyInterruptAt: 0,
-  mic: { state: 'idle', stream: null, ctx: null, analyser: null, data: null, loop: null, pending: null, level: 0, active: false, silentSince: 0, silentNotified: false, env: null },
+  mic: { state: 'idle', stream: null, ctx: null, analyser: null, data: null, loop: null, pending: null, generation: 0, level: 0, active: false, silentSince: 0, silentNotified: false, env: null },
 }
 
 /* ------------------------------ DOM 快捷方式 ------------------------------ */
 const D = {}
+let callFocusOrigin = null
+let callBackgroundState = null
+
+function activateCallModal() {
+  if (!callBackgroundState) {
+    callFocusOrigin = document.activeElement
+    callBackgroundState = ['#screens', '#tabbar', '#kb-screen'].map((selector) => $(selector)).filter(Boolean)
+      .map((element) => ({ element, inert: element.inert }))
+    for (const { element } of callBackgroundState) element.inert = true
+  }
+  D.call.setAttribute('role', 'dialog')
+  D.call.setAttribute('aria-modal', 'true')
+  D.call.setAttribute('aria-labelledby', 'call-name')
+  D.call.tabIndex = -1
+  ;(D.back || D.call).focus({ preventScroll: true })
+}
+
+function releaseCallModal() {
+  for (const { element, inert } of callBackgroundState || []) element.inert = inert
+  callBackgroundState = null
+  D.call.removeAttribute('aria-modal')
+  const origin = callFocusOrigin
+  callFocusOrigin = null
+  if (document.body.classList.contains('sheet-open')) return
+  const target = origin && origin.isConnected && !origin.closest('[hidden], [inert]')
+    ? origin : $('#tabbar [aria-selected="true"]')
+  if (target && typeof target.focus === 'function') target.focus({ preventScroll: true })
+}
+
+function containCallFocus(event) {
+  if (event.key !== 'Tab' || event.defaultPrevented || !C.open || document.body.classList.contains('sheet-open')) return
+  const controls = [...D.call.querySelectorAll('button, a[href], input, textarea, select, [tabindex], [contenteditable="true"]')]
+    .filter((element) => !element.disabled && element.tabIndex >= 0 && !element.closest('[hidden], [inert]') && element.getClientRects().length)
+  const first = controls[0] || D.call
+  const last = controls[controls.length - 1] || D.call
+  const active = document.activeElement
+  if (!controls.length || !D.call.contains(active) || (event.shiftKey ? active === first : active === last)) {
+    event.preventDefault()
+    ;(event.shiftKey ? last : first).focus({ preventScroll: true })
+  }
+}
+
 function cacheDom() {
   D.call = $('#call')
   D.bg = $('#call-bg')
@@ -275,7 +320,7 @@ function cycleKbMode() {
   if (prevKbMode !== C.kbMode) {
     if (C.kbMode !== 'grounded') void stopCharacterVoice()
     try {
-      if (C.volc && typeof C.volc.setOutputMuted === 'function') C.volc.setOutputMuted(materialTtsMode())
+      if (C.volc && typeof C.volc.setOutputMuted === 'function') C.volc.setOutputMuted(C.muted || materialTtsMode())
     } catch {
       /* 忽略 */
     }
@@ -546,9 +591,11 @@ function loadVoiceAudioModule() {
 /** 用当前老师音色播放一句话；helper 未就绪/失败返回 false（调用方回退 tts）。 */
 async function playCharacterVoice(text, { characterId = '', onStart, onEnd, volume, rate } = {}) {
   const value = String(text || '').trim()
-  if (!value) return false
+  if (!value || C.muted || !C.open || C.closingCall) return false
+  const generation = C.callGeneration
   try {
     const mod = await loadVoiceAudioModule()
+    if (generation !== C.callGeneration || C.muted || !C.open || C.closingCall) return false
     const fn = mod && (mod.playCharacterText || mod.default)
     if (typeof fn !== 'function') return false
     const result = await fn(value, {
@@ -731,12 +778,19 @@ async function finalizeLesson() {
   if (!C.lesson || !C.character || C.lessonSubmitting) return
   C.lessonSubmitting = true
   const lesson = C.lesson
+  const generation = C.callGeneration
+  const sheetToken = ui.openSheet(
+    '正在保存本课进度',
+    '<div class="summary-loading"><span class="spinner"></span><div>正在同步这次练习…</div></div>',
+  )
+  const isCurrentLesson = () => C.open && C.callGeneration === generation && C.lesson === lesson
   try {
     const res = await postJSON('/api/plan/scene-done', {
       lessonId: lesson.id,
       stageId: C.lessonStageId || '',
       stepsCompleted: 3,
     })
+    if (!isCurrentLesson()) return
     C.lessonSubmitting = false
     if (!res || res.ok === false || res.completed === false) {
       const reasonMap = {
@@ -747,27 +801,29 @@ async function finalizeLesson() {
         'no-plan': '还没有学习计划，先去助手定制计划',
       }
       const reason = res && res.reason ? reasonMap[res.reason] || res.reason : ''
-      showLessonResultSheet({ error: (res && res.error) || reason || '课程完成上报失败' })
+      showLessonResultSheet({ error: (res && res.error) || reason || '课程完成上报失败' }, sheetToken)
       return
     }
     if (res.plan) {
-      M.plan = res.plan
+      saveLocalPlan(res.plan)
       try {
         ui.refreshCourses()
       } catch {
         /* 忽略 */
       }
     }
-    showLessonResultSheet(res)
+    showLessonResultSheet(res, sheetToken)
   } catch (err) {
+    if (!isCurrentLesson()) return
     C.lessonSubmitting = false
-    showLessonResultSheet({ error: (err && err.message) || '网络异常，课程完成上报失败' })
+    showLessonResultSheet({ error: (err && err.message) || '网络异常，课程完成上报失败' }, sheetToken)
   }
 }
 
-function showLessonResultSheet(res) {
-  if (!C.lesson) return
+function showLessonResultSheet(res, sheetToken) {
+  if (!C.lesson || !ui.isSheetCurrent(sheetToken)) return
   const lesson = C.lesson
+  const generation = C.callGeneration
   const failed = !!(res && res.error)
   const plan = (res && res.plan) || M.plan || {}
   const progress = Math.max(0, Math.min(100, Math.round(Number(plan.progress) || 0)))
@@ -802,22 +858,23 @@ function showLessonResultSheet(res) {
           ${nextLesson ? '<button type="button" class="btn btn-primary" data-act="lesson-next">下一课 · ' + esc(nextLesson.title) + '</button>' : ''}
         </div>
       </div>`
-  ui.openSheet(title, html)
+  if (!ui.updateSheet(sheetToken, title, html)) return
   const body = $('#sheet-body')
   if (!body) return
   body.onclick = (event) => {
+    if (!ui.isSheetCurrent(sheetToken) || C.callGeneration !== generation || C.lesson !== lesson) return
     const target = event.target instanceof Element ? event.target.closest('[data-act]') : null
     if (!target) return
     const act = target.getAttribute('data-act')
     if (act === 'lesson-return') {
-      ui.closeSheet()
+      ui.closeSheet(sheetToken)
       void (async () => {
         await endCall({ silent: true })
         ui.switchTab('courses')
         ui.refreshCourses()
       })()
     } else if (act === 'lesson-next') {
-      ui.closeSheet()
+      ui.closeSheet(sheetToken)
       void (async () => {
         const teacherChar = characterById(nextTeacherId) || C.character
         const sceneIdx = nextLesson && nextLesson.sceneId ? lessonSceneIndex(teacherChar, nextLesson.sceneId) : -1
@@ -830,7 +887,7 @@ function showLessonResultSheet(res) {
         })
       })()
     } else if (act === 'lesson-retry') {
-      ui.closeSheet()
+      ui.closeSheet(sheetToken)
       C.lessonDone = true
       C.lessonSubmitting = false
       void finalizeLesson()
@@ -1317,6 +1374,10 @@ function autoStartMaterialLesson() {
   showDialogue(script)
   scrollBubblesToBottom(true)
   void translateBubble(node.id, script)
+  if (C.muted) {
+    setState('idle')
+    return true
+  }
   setState('speaking')
   void playCharacterVoice(sentence.text, {
     onEnd: () => {
@@ -1526,8 +1587,9 @@ function hideDialogue() {
 
 function updateDialogueStatus(state) {
   if (!D.dlgState) return
+  const idleLabel = M.settings?.hasKey === false && C.engine !== 'volc' ? '文字演示' : '待你开口'
   D.dlgState.textContent =
-    state === 'speaking' ? '正在说话' : state === 'thinking' ? '思考中' : state === 'listening' ? '聆听中' : '在线'
+    state === 'speaking' ? '正在说话' : state === 'thinking' ? '思考中' : state === 'listening' ? '聆听中' : idleLabel
 }
 
 /* ------------------------------ 气泡自动滚到最新（v1.8） ------------------------------ */
@@ -1815,6 +1877,10 @@ export async function openCall(characterOrId, sceneIdx = 0, opts = {}) {
     return
   }
   if (C.open) endCall({ silent: true })
+  const generation = ++C.callGeneration
+  C.closingCall = false
+  C.volcRecovering = false
+  C.volcRecoverAt = 0
   const lessonOpt = opts && opts.lesson && typeof opts.lesson === 'object' ? opts.lesson : null
   const lessonHintScene = lessonOpt && lessonOpt.sceneId ? lessonOpt.sceneId : ''
   if (lessonHintScene) {
@@ -1894,6 +1960,7 @@ export async function openCall(characterOrId, sceneIdx = 0, opts = {}) {
   }
   D.call.hidden = false
   C.open = true
+  activateCallModal()
   D.call.dataset.char = character.id
   const theme = character.themeColor || '#6b4a2e'
   D.call.style.setProperty('--char-grad', `radial-gradient(130% 100% at 50% 0%, ${hexToRgba(theme, 0.6)}, #10131f 62%, #07080d 100%)`)
@@ -1935,6 +2002,7 @@ export async function openCall(characterOrId, sceneIdx = 0, opts = {}) {
   D.translate.classList.add('is-on')
   D.translate.setAttribute('aria-pressed', 'true')
   C.engine = await detectEngine()
+  if (generation !== C.callGeneration || !C.open || C.closingCall) return false
   updateEngineLabel()
   setState('idle')
   startTimer()
@@ -2003,14 +2071,16 @@ function interruptAutoReplyOnce(reason) {
 async function ensureVolc() {
   if (C.volc) return C.volc
   if (C.volcLoading) return C.volcLoading
-  C.volcLoading = (async () => {
+  const generation = C.callGeneration
+  const loading = (async () => {
     try {
       const mod = await import('../doubao-voice.js')
+      if (generation !== C.callGeneration || !C.open || C.closingCall) return null
       const factory = mod.createDoubaoVoice || mod.createDoubao || mod.default
       if (typeof factory !== 'function') return null
-      const voice = factory({
+      const callbacks = {
         characterId: C.character && C.character.id,
-        outputMuted: materialTtsMode(),
+        outputMuted: C.muted || materialTtsMode(),
         onReady(info) {
           if (!volcCallbacksValid()) return
           C.engine = 'volc'
@@ -2174,6 +2244,7 @@ async function ensureVolc() {
           setHeadLevel(Math.min(0.7, value))
         },
         onMicLevel(level) {
+          if (!volcCallbacksValid()) return
           const value = Math.max(0, Math.min(1, Number(level) || 0))
           C.pttMicLevel = value
           C.pttLevelSeen = true
@@ -2232,20 +2303,28 @@ async function ensureVolc() {
             toast('语音连接已断开，请再点麦克风重试', 'bad', 3200)
           }
         },
-      })
+      }
+      let voice = null
+      const guarded = Object.fromEntries(Object.entries(callbacks).map(([key, callback]) => [key,
+        typeof callback === 'function' ? (...args) => {
+          if (C.volc === voice) return callback(...args)
+        } : callback,
+      ]))
+      voice = factory(guarded)
       if (voice && voice.isSupported === false) return null
-      if (typeof voice.setOutputMuted === 'function') voice.setOutputMuted(materialTtsMode())
+      if (typeof voice.setOutputMuted === 'function') voice.setOutputMuted(C.muted || materialTtsMode())
       C.volc = voice
       if (typeof window !== 'undefined') window.__avaDebugVoice = voice
       return voice
     } catch (err) {
       console.warn('[mobile] 豆包语音加载失败：', err)
       return null
-    } finally {
-      C.volcLoading = null
     }
-  })()
-  return C.volcLoading
+  })().finally(() => {
+    if (C.volcLoading === loading) C.volcLoading = null
+  })
+  C.volcLoading = loading
+  return loading
 }
 
 /** 资料模式：实时对话只取文字，老师声音改用完整角色 TTS，避免上游 TTS 中途断流。 */
@@ -2256,6 +2335,11 @@ function materialTtsMode() {
 function speakGroundedReply(text) {
   const value = String(text || '').trim()
   if (!value) return
+  if (!C.open || C.closingCall) return
+  if (C.muted) {
+    setState('idle')
+    return
+  }
   const token = ++C.groundedTtsToken
   void stopCharacterVoice()
   setState('speaking')
@@ -2547,7 +2631,7 @@ function renderMicEnvironment(env) {
   if (D.envBanner) {
     if (!env.secure) {
       D.envBanner.hidden = false
-      D.envBanner.textContent = '当前地址不是安全环境：请用 http://127.0.0.1:5180 或 HTTPS 打开，不能用局域网 IP 的 http。'
+      D.envBanner.textContent = '语音需要 HTTPS 或本机 localhost，当前可用文字练习。'
       D.envBanner.classList.add('is-blocked')
     } else if (!env.hasMedia) {
       D.envBanner.hidden = false
@@ -2577,7 +2661,7 @@ function renderMicEnvironment(env) {
       label: env.secure ? '无法访问麦克风' : '当前环境不支持麦克风',
       message: env.secure
         ? '当前浏览器无法访问麦克风，请换 Chrome 或 HTTPS 打开，或改用文字输入。'
-        : '当前地址不是安全环境：请用 http://127.0.0.1:5180 或 HTTPS 打开；局域网 http 地址无法使用麦克风。',
+        : '语音需要 HTTPS 或本机 localhost，当前可用文字练习。',
       showRetry: false,
       showDiag: true,
       showText: true,
@@ -2609,7 +2693,9 @@ function renderMicEnvironment(env) {
 
 /** 进入通话页：先做环境检测，正常才请求麦克风。 */
 async function initMicForCall() {
+  const generation = C.callGeneration
   const env = await detectMicEnvironment()
+  if (generation !== C.callGeneration || !C.open || C.closingCall) return false
   if (!env.secure || !env.hasMedia) return false
   if (env.permission === 'denied') return false
   if (env.audioInputs === 0) return false
@@ -2623,7 +2709,7 @@ async function handleMicRetry() {
   if (!env.secure || !env.hasMedia) {
     setMicDock('unsupported', {
       label: env.secure ? '无法访问麦克风' : '当前环境不支持麦克风',
-      message: '请用 http://127.0.0.1:5180 或 HTTPS 打开；当前地址/浏览器无法使用麦克风，可改用文字输入。',
+      message: '语音需要 HTTPS 或本机 localhost，当前可用文字练习。',
       showDiag: true,
       showText: true,
     })
@@ -2688,9 +2774,9 @@ function showMicHelpSheet(kind = 'denied') {
   const env = C.mic.env || {}
   const intro =
     kind === 'env' || !env.secure
-      ? '当前地址不是安全环境，麦克风无法使用。请先换用 http://127.0.0.1:5180 或 HTTPS 地址打开。'
+      ? '语音需要 HTTPS 或本机 localhost，当前可用文字练习。'
       : '如果 Chrome 已阻止本站麦克风，按下面步骤把它改为「允许」：'
-  ui.openSheet(
+  const sheetToken = ui.openSheet(
     '开启麦克风权限',
     `<div class="mic-help">
       <p>${esc(intro)}</p>
@@ -2708,8 +2794,9 @@ function showMicHelpSheet(kind = 'denied') {
     </div>`,
   )
   const body = $('#sheet-body')
-  if (body) {
+  if (body && ui.isSheetCurrent(sheetToken)) {
     body.onclick = (event) => {
+      if (!ui.isSheetCurrent(sheetToken)) return
       const target = event.target instanceof Element ? event.target.closest('[data-act]') : null
       if (!target) return
       const act = target.getAttribute('data-act')
@@ -2721,7 +2808,8 @@ function showMicHelpSheet(kind = 'denied') {
 
 /** 请求麦克风 + 实时音量条 + 权限诊断（不保存/上传任何音频）。 */
 async function ensureMicMonitor({ force = false } = {}) {
-  if (C.mic.pending) return C.mic.pending
+  if (!C.open || C.closingCall) return false
+  if (C.mic.pending && !force) return C.mic.pending
   if (C.mic.active && !force) return true
   if (force) stopMicMonitor()
   const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
@@ -2730,14 +2818,21 @@ async function ensureMicMonitor({ force = false } = {}) {
     return false
   }
   setMicDock('checking')
-  C.mic.pending = (async () => {
+  const generation = ++C.mic.generation
+  const pending = (async () => {
+    let stream = null
+    let ctx = null
     try {
-      const stream = await media.getUserMedia({
+      stream = await media.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       })
+      if (generation !== C.mic.generation || !C.open || C.closingCall) {
+        stream.getTracks().forEach((track) => track.stop())
+        return false
+      }
       const AC = window.AudioContext || window.webkitAudioContext
       if (!AC) throw Object.assign(new Error('AudioContext 不可用'), { name: 'NotSupportedError' })
-      const ctx = new AC()
+      ctx = new AC()
       const source = ctx.createMediaStreamSource(stream)
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 512
@@ -2755,18 +2850,24 @@ async function ensureMicMonitor({ force = false } = {}) {
       startMicLoop()
       return true
     } catch (err) {
+      if (stream) stream.getTracks().forEach((track) => track.stop())
+      if (ctx) { try { ctx.close() } catch { /* 忽略 */ } }
+      if (generation !== C.mic.generation || !C.open || C.closingCall) return false
       const kind = classifyMicError(err)
       const messages = { denied: MIC_MESSAGES.denied, unavailable: MIC_MESSAGES.unavailable, busy: MIC_MESSAGES.busy, unsupported: MIC_MESSAGES.unsupported, error: MIC_MESSAGES.error }
       setMicDock(kind, { message: messages[kind], showRetry: kind === 'denied' || kind === 'unavailable' || kind === 'busy' || kind === 'error', showDiag: true, showText: true })
       return false
-    } finally {
-      C.mic.pending = null
     }
-  })()
-  return C.mic.pending
+  })().finally(() => {
+    if (C.mic.pending === pending) C.mic.pending = null
+  })
+  C.mic.pending = pending
+  return pending
 }
 
 function stopMicMonitor() {
+  C.mic.generation += 1
+  C.mic.pending = null
   stopMicLoop()
   if (C.mic.stream) {
     try {
@@ -2837,7 +2938,7 @@ function bumpPttToken() {
 }
 
 function volcCallbacksValid() {
-  return !!(C.open && C.engine === 'volc' && C.volc && C.volcToken > 0 && C.volcToken === C.pttToken)
+  return !!(C.open && !C.closingCall && C.engine === 'volc' && C.volc && C.volcToken > 0 && C.volcToken === C.pttToken)
 }
 
 function clearPttTimers() {
@@ -3182,7 +3283,15 @@ function ensurePttStt() {
     onError(err) {
       const kind = classifyRecognitionError(err)
       if (C.ptt === 'recording') {
-        // 单条内联诊断提示（不堆叠 red toast），保留录音 UI 直到用户再点麦克风取消
+        if (kind !== 'no-speech' && kind !== 'interrupted') {
+          setPttState('idle')
+          abortPtt({ silent: true })
+          setState('idle')
+          showRecognitionFailure(kind)
+          showTextForm(true)
+          return
+        }
+        // 短暂无声音/被打断时保留本轮；无法继续识别的错误则明确退出录音。
         if (!C.pttErrorShown) {
           C.pttErrorShown = true
           showRecognitionFailure(kind)
@@ -3248,6 +3357,7 @@ function cancelConnectingPtt() {
 }
 
 function interruptReplyForPtt() {
+  C.chatGeneration += 1
   try {
     tts.cancel()
   } catch {
@@ -3465,14 +3575,14 @@ function scheduleVolcWarmup(delay = 500) {
   clearVolcWarmup()
   C.volcWarmTimer = setTimeout(() => {
     C.volcWarmTimer = null
-    if (!C.open || C.engine !== 'volc' || C.ptt !== 'idle') return
+    if (!C.open || C.closingCall || C.engine !== 'volc' || C.ptt !== 'idle') return
     void warmVolcSession()
   }, delay)
 }
 
 /** 预热：提前 start 并暂停 mic，减少下一轮连接吞音；失败静默。 */
 async function warmVolcSession() {
-  if (!C.open || C.engine !== 'volc' || C.ptt !== 'idle' || C.volcWarming) return
+  if (!C.open || C.closingCall || C.engine !== 'volc' || C.ptt !== 'idle' || C.volcWarming) return
   C.volcWarming = true
   C.volcWarmPromise = (async () => {
     try {
@@ -3581,9 +3691,12 @@ function startBrowserPtt() {
   if (!stt) {
     if (!C.pttErrorShown) {
       C.pttErrorShown = true
-      toast('当前浏览器不支持语音识别，可直接打字；也可以点「完成」结束这次录音', 'info', 3600)
+      toast('当前浏览器不支持语音识别，可以用文字继续对话', 'info', 3600)
     }
-    return true
+    setPttState('idle')
+    setState('idle')
+    showTextForm(true)
+    return false
   }
   try {
     if (stt.isActive) stt.stop()
@@ -3591,14 +3704,17 @@ function startBrowserPtt() {
     /* 忽略 */
   }
   try {
-    stt.start()
+    if (stt.start() === false) throw new Error('语音识别未能启动')
     return true
   } catch {
     if (!C.pttErrorShown) {
       C.pttErrorShown = true
-      toast('麦克风启动失败，可以直接打字聊天，或点「完成」结束', 'bad', 3200)
+      toast('语音识别启动失败，可以用文字继续对话', 'bad', 3200)
     }
-    return true
+    setPttState('idle')
+    setState('idle')
+    showTextForm(true)
+    return false
   }
 }
 
@@ -3773,6 +3889,10 @@ export function simulateTranscript(text) {
 
 /** 取消本轮录音（丢弃），Esc / ✕ 调用。 */
 export function cancelPtt() {
+  if (C.ptt === 'connecting') {
+    cancelConnectingPtt()
+    return true
+  }
   if (C.ptt !== 'recording' && C.ptt !== 'submitting') return false
   abortPtt({ silent: false })
   setState('idle')
@@ -3828,19 +3948,28 @@ function abortPtt({ silent = false } = {}) {
 /* ------------------------------ 浏览器语音 ------------------------------ */
 /* ------------------------------ 文本 / 聊天回复 ------------------------------ */
 function showTextForm(show) {
+  const returnFocus = !show && D.textForm.contains(document.activeElement)
+  const canFocus = C.open && !document.body.classList.contains('sheet-open')
   D.textForm.hidden = !show
   if (D.call) D.call.classList.toggle('text-open', !!show)
   if (show && D.call) toggleHistory(false)
   D.textBtn.classList.toggle('is-on', show)
   if (show) {
     if (D.talkLabel) D.talkLabel.textContent = '文字模式 · 回车发送'
-    setTimeout(() => D.textInput && D.textInput.focus(), 60)
+    if (canFocus && D.textInput) D.textInput.focus({ preventScroll: true })
   } else {
     setState(C.state === 'idle' ? 'idle' : C.state)
+    if (returnFocus && canFocus && D.textBtn) D.textBtn.focus({ preventScroll: true })
   }
 }
 
 async function sendTextToChat(value) {
+  if (!C.open || C.closingCall) return false
+  const generation = ++C.chatGeneration
+  const valid = () => C.open && !C.closingCall && generation === C.chatGeneration
+  const previous = C.chatHandle
+  C.chatHandle = null
+  if (previous) { try { previous.abort() } catch { /* 忽略 */ } }
   setState('thinking')
   dropInterim()
   clearCitations()
@@ -3866,10 +3995,12 @@ async function sendTextToChat(value) {
       },
       {
         onMeta(payload) {
+          if (!valid()) return
           const hits = extractKbHits(payload)
           if (hits) renderCitations(hits)
         },
         onDelta(text) {
+          if (!valid()) return
           C.streamText += text
           const el = node.querySelector('.bubble-en')
           if (el) el.textContent = C.streamText
@@ -3878,6 +4009,8 @@ async function sendTextToChat(value) {
           setState('speaking')
         },
         onDone(payload) {
+          if (!valid()) return
+          C.chatHandle = null
           finished = true
           const finalText = (payload && payload.fullReply) || C.streamText
           C.messages.push({ role: 'assistant', content: finalText })
@@ -3897,6 +4030,8 @@ async function sendTextToChat(value) {
           else setState('idle')
         },
         onError(err) {
+          if (!valid()) return
+          C.chatHandle = null
           finished = true
           C.streamBubbleId = null
           const message = (err && err.message) || '回复失败，请再试一次'
@@ -3909,6 +4044,7 @@ async function sendTextToChat(value) {
       },
     )
   } catch (err) {
+    if (!valid()) return false
     finished = true
     toast('发送失败，请重试', 'bad')
     setState('idle')
@@ -4002,28 +4138,28 @@ function showHint(hint) {
 }
 
 /* ------------------------------ 结束通话 / 总结 ------------------------------ */
+function stopCallOutput() {
+  C.chatGeneration += 1
+  C.groundedTtsToken += 1
+  C.docs.readToken += 1
+  void stopCharacterVoice()
+  try { tts.cancel() } catch { /* 忽略 */ }
+  const handle = C.chatHandle
+  C.chatHandle = null
+  if (handle) { try { handle.abort() } catch { /* 忽略 */ } }
+}
+
 async function endCall({ silent = false } = {}) {
   if (!C.open) return
   C.closingCall = true
+  C.callGeneration += 1
+  C.volcLoading = null
   persistLessonProgress({ immediate: true })
   clearVolcWarmup()
   stopTimer()
   dropInterim()
-  void stopCharacterVoice()
+  stopCallOutput()
   abortPtt({ silent: true })
-  if (C.chatHandle) {
-    try {
-      C.chatHandle.abort()
-    } catch {
-      /* 忽略 */
-    }
-    C.chatHandle = null
-  }
-  try {
-    tts.cancel()
-  } catch {
-    /* 忽略 */
-  }
   if (C.volc) {
     try {
       if (C.volc.isActive) C.volc.stop()
@@ -4047,6 +4183,7 @@ async function endCall({ silent = false } = {}) {
   document.body.classList.remove('call-open')
   toggleHistory(false)
   D.call.hidden = true
+  releaseCallModal()
   if (!silent && C.userTurns > 0) {
     void reportSceneDone()
   }
@@ -4065,6 +4202,9 @@ async function reportSceneDone() {
 async function hangup() {
   if (!C.open) return
   C.closingCall = true
+  C.callGeneration += 1
+  C.volcLoading = null
+  stopCallOutput()
   persistLessonProgress({ immediate: true })
   clearVolcWarmup()
   const messages = C.messages.slice(-40)
@@ -4086,11 +4226,14 @@ async function hangup() {
   setState('idle')
   C.endAfterSheet = true
   const token = ++C.summaryToken
-  if (!messages.length) {
-    openSummaryLocal()
+  C.summarySheetToken = null
+  if (!messages.some((message) => message.role === 'user' && String(message.content || '').trim())) {
+    // A greeting alone is not a learning session and must not create words or progress.
+    endCall({ silent: true })
     return
   }
-  openSummaryLoading()
+  const sheetToken = openSummaryLoading()
+  if (!ui.isSheetCurrent(sheetToken)) return
   // 第一步：即时规则总结（毫秒级），保证挂断后马上有「重点句型 + 重点单词」可看
   let quick = null
   try {
@@ -4107,45 +4250,37 @@ async function hangup() {
   } catch {
     quick = null
   }
-  if (C.summaryToken !== token || !C.endAfterSheet) return
+  if (C.summaryToken !== token || !C.endAfterSheet || !ui.isSheetCurrent(sheetToken)) return
   if (quick && quick.ok !== false && !quick.error) {
-    paintSummary(openSummaryHtml({ ...quick, quick: true }))
+    paintSummary(openSummaryHtml({ ...quick, quick: true }), sheetToken)
   }
   // 第二步：AI 总结，成功则替换即时版；失败就保留即时版
   const summary = await fetchSummary(messages)
-  if (C.summaryToken !== token || !C.endAfterSheet) return
+  if (C.summaryToken !== token || !C.endAfterSheet || !ui.isSheetCurrent(sheetToken)) return
   if (summary && !summary.error && (summary.summary_zh || (Array.isArray(summary.keyWords) && summary.keyWords.length))) {
-    paintSummary(openSummaryHtml(summary))
+    paintSummary(openSummaryHtml(summary), sheetToken)
   } else if (!quick || quick.ok === false) {
-    openSummaryLocal()
+    openSummaryLocal(sheetToken)
   }
 }
 
 /** 更新已打开的通话总结弹层（不重复 push overlay）。 */
-function paintSummary(html) {
-  const body = $('#sheet-body')
-  const title = $('#sheet-title')
-  if (document.body.classList.contains('sheet-open') && body) {
-    if (title) title.textContent = '通话总结'
-    body.innerHTML = html
-    bindSummaryActions()
-    return
-  }
-  ui.openSheet('通话总结', html)
-  bindSummaryActions()
+function paintSummary(html, sheetToken = C.summarySheetToken) {
+  if (!ui.isSheetCurrent(sheetToken) || !ui.updateSheet(sheetToken, '通话总结', html)) return false
+  bindSummaryActions(sheetToken)
+  return true
 }
 
 function openSummaryLoading() {
-  ui.openSheet(
+  C.summarySheetToken = ui.openSheet(
     '通话总结',
     `<div class="summary-loading"><span class="spinner"></span><div>Ava 正在整理这次通话…</div></div>`,
   )
+  return C.summarySheetToken
 }
 
-function openSummaryLocal() {
-  ui.openSheet(
-    '通话总结',
-    `<div class="empty-card" style="align-items:flex-start;text-align:left">
+function openSummaryLocal(sheetToken = null) {
+  const html = `<div class="empty-card" style="align-items:flex-start;text-align:left">
       <span class="empty-orb">${icon('spark')}</span>
       <strong>这次还没开口呢</strong>
       <p>下次试着说一两句英文，Ava 就能帮你复盘纠错、整理重点单词。也可以点「再聊一会」继续。</p>
@@ -4153,9 +4288,11 @@ function openSummaryLocal() {
     <div class="summary-actions">
       <button type="button" class="btn btn-ghost" data-act="summary-wordbook">${icon('book')}查看今日单词表</button>
       <button type="button" class="btn btn-primary" data-act="summary-resume">${icon('phone')}再聊一会</button>
-    </div>`,
-  )
-  bindSummaryActions()
+    </div>`
+  if (sheetToken !== null) return paintSummary(html, sheetToken)
+  C.summarySheetToken = ui.openSheet('通话总结', html)
+  bindSummaryActions(C.summarySheetToken)
+  return C.summarySheetToken
 }
 
 function openSummary(summary) {
@@ -4208,17 +4345,21 @@ function openSummaryHtml(summary) {
     </div>`
 }
 
-function bindSummaryActions() {
+function bindSummaryActions(sheetToken = C.summarySheetToken) {
   const body = $('#sheet-body')
-  if (!body) return
+  if (!body || !ui.isSheetCurrent(sheetToken)) return
+  const token = C.summaryToken
   body.onclick = (event) => {
+    if (C.summaryToken !== token || !ui.isSheetCurrent(sheetToken)) return
     const target = event.target instanceof Element ? event.target.closest('[data-act]') : null
     if (!target) return
     const act = target.getAttribute('data-act')
     if (act === 'summary-wordbook') void showWordbookSheet()
     else if (act === 'summary-resume') {
-      ui.closeSheet()
+      ui.closeSheet(sheetToken)
       C.endAfterSheet = false
+      C.closingCall = false
+      C.volcRecovering = false
       startTimer()
       toast('继续聊吧，Ava 在听', 'info', 1800)
     }
@@ -4230,13 +4371,13 @@ export function onSheetClosed() {
   if (C.endAfterSheet) {
     C.endAfterSheet = false
     endCall({ silent: true })
-    ui.switchTab('chat')
   }
 }
 
 /* ------------------------------ 事件绑定 ------------------------------ */
 function bindCall() {
   C.bound = true
+  document.addEventListener('keydown', containCallFocus)
   D.talk.addEventListener('click', () => {
     void togglePtt()
   })
@@ -4311,7 +4452,10 @@ function bindCall() {
     D.mute.classList.toggle('is-off', C.muted)
     D.mute.classList.toggle('is-on', !C.muted)
     D.mute.setAttribute('aria-pressed', C.muted ? 'true' : 'false')
+    if (C.volc && typeof C.volc.setOutputMuted === 'function') C.volc.setOutputMuted(C.muted || materialTtsMode())
     if (C.muted) {
+      C.groundedTtsToken += 1
+      C.docs.readToken += 1
       void stopCharacterVoice()
       try {
         tts.cancel()

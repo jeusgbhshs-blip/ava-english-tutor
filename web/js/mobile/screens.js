@@ -256,8 +256,8 @@ async function pickPlanTeacher(teacherId) {
       toast(res.error || '切换老师失败，请稍后重试', 'bad', 3000)
       return
     }
-    if (res.plan && typeof res.plan === 'object') M.plan = res.plan
-    else if (M.plan) M.plan = { ...M.plan, teacherId, teacherName: planTeacher({ teacherId }).name }
+    if (res.plan && typeof res.plan === 'object') saveLocalPlan(res.plan)
+    else if (M.plan) saveLocalPlan({ ...M.plan, teacherId, teacherName: planTeacher({ teacherId }).name })
     renderCourses()
     toast(`老师已切换为 ${planTeacher(M.plan).name}`, 'ok', 2400)
   } finally {
@@ -280,7 +280,7 @@ async function restartPlanLesson(lessonId) {
       return
     }
     if (res.plan && typeof res.plan === 'object') {
-      M.plan = res.plan
+      saveLocalPlan(res.plan)
       renderCourses()
     } else {
       await refreshCourses()
@@ -300,7 +300,7 @@ async function retryPlanGeneration() {
       toast(res.error || '重试失败，请稍后重试', 'bad', 3000)
       return
     }
-    if (res.plan && typeof res.plan === 'object') M.plan = res.plan
+    if (res.plan && typeof res.plan === 'object') saveLocalPlan(res.plan)
     renderCourses()
     toast('正在重新生成课件…', 'info', 2600)
   } finally {
@@ -871,7 +871,7 @@ export function renderChat() {
       <div class="hero-topbar">
         <div class="hero-brand">
           <span class="brand-orb">${icon('spark')}</span>
-          <div><div class="hero-brand-name">Ava 英语会话</div><div class="hero-brand-tag">IMMERSIVE ENGLISH · 和真人角色开口聊</div></div>
+          <div><div class="hero-brand-name">Ava 英语会话</div><div class="hero-brand-tag">IMMERSIVE ENGLISH · 和 AI 角色开口聊</div></div>
         </div>
         <div class="hero-top-actions">
           <span class="hero-chip accent">${icon('flame')}${esc(level)} 等级</span>
@@ -922,13 +922,15 @@ function bindChat(host, active) {
    ========================================================================== */
 /** v3.3：助手页渲染缓存 key（thread 长度 + 最后一条内容，切回 Tab 时复用 DOM 不重建）。 */
 let assistantRenderKey = ''
+let assistantPending = false
+let assistantRequestId = 0
 
 /** 计算当前助手 thread 的渲染 key。 */
 function assistantThreadKey() {
   const thread = Array.isArray(M.assistantThread) ? M.assistantThread : []
   const last = thread.length ? thread[thread.length - 1] : null
   const lastText = last ? String(last.role || '') + ':' + String(last.content || '').slice(0, 120) : ''
-  return String(thread.length) + '|' + lastText
+  return String(thread.length) + '|' + lastText + '|' + assistantPending
 }
 
 const ASSISTANT_CHIPS = [
@@ -953,6 +955,8 @@ export function renderAssistant(options = {}) {
   const prevValue = prevInput ? String(prevInput.value || '') : ''
   const prevSelection =
     prevInput && typeof prevInput.selectionStart === 'number' ? prevInput.selectionStart : null
+  const prevSelectionEnd =
+    prevInput && typeof prevInput.selectionEnd === 'number' ? prevInput.selectionEnd : prevSelection
   const prevFocused = !!prevInput && document.activeElement === prevInput
   const thread = M.assistantThread
   const threadHtml = thread
@@ -994,34 +998,35 @@ export function renderAssistant(options = {}) {
           <span class="kb-entry-go">${icon('chevron')}</span>
         </button>
         <div class="assistant-chips">
-      ${ASSISTANT_CHIPS.map((c) => `<button type="button" class="a-chip" data-act="chip" data-msg="${esc(c.message)}">${esc(c.label)}</button>`).join('')}
+      ${ASSISTANT_CHIPS.map((c) => `<button type="button" class="a-chip" data-act="chip" data-msg="${esc(c.message)}"${assistantPending ? ' disabled' : ''}>${esc(c.label)}</button>`).join('')}
     </div></div>
       <div class="screen-main">
         <div class="chat-thread" id="assistant-thread">
       ${threadHtml || `<div class="msg ava"><span class="msg-avatar">${icon('spark')}</span><div class="msg-bubble"><p>你可以直接问我，比如「帮我安排一个每天 10 分钟的 A2 计划」。也可以点上面的快捷选项。</p></div></div>`}
+      ${assistantPending ? `<div class="msg ava" id="assistant-typing" role="status" aria-label="正在等待 Ava 回复"><span class="msg-avatar">${icon('spark')}</span><div class="msg-bubble"><span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span></div></div>` : ''}
     </div>
     <form class="assistant-inputbar" id="assistant-form" autocomplete="off">
       <input type="text" id="assistant-input" class="input" placeholder="告诉 Ava 你想做什么…" maxlength="500" aria-label="给 Ava 发消息">
-      <button type="submit" class="send-btn" aria-label="发送">${icon('send')}</button>
+      <button type="submit" class="send-btn" aria-label="${assistantPending ? '正在等待 Ava 回复' : '发送'}"${assistantPending ? ' disabled' : ''}>${icon('send')}</button>
     </form>
       </div>
     </div>`
   host.dataset.renderKey = renderKey
   assistantRenderKey = renderKey
   bindAssistant(host)
-  // 恢复用户输入内容与光标（本次重建由新消息触发；空输入不处理）
-  if (prevValue) {
+  // 空输入也恢复焦点，等待回复时可继续写下一条；保留选区两端。
+  if (prevInput) {
     const nextInput = document.getElementById('assistant-input')
     if (nextInput) {
       nextInput.value = prevValue
       if (prevSelection != null) {
         try {
-          nextInput.setSelectionRange(prevSelection, prevSelection)
+          nextInput.setSelectionRange(prevSelection, prevSelectionEnd)
         } catch {
           /* 忽略 */
         }
       }
-      if (prevFocused) {
+      if (prevFocused && M.tab === 'assistant') {
         try {
           nextInput.focus({ preventScroll: true })
         } catch {
@@ -1058,6 +1063,7 @@ function bindAssistant(host) {
   if (form && input) {
     form.onsubmit = (event) => {
       event.preventDefault()
+      if (assistantPending) return
       const value = input.value.trim()
       if (!value) return
       input.value = ''
@@ -1077,6 +1083,7 @@ function bindAssistant(host) {
       return
     }
     if (act === 'chip') {
+      if (assistantPending) return
       const message = target.getAttribute('data-msg') || target.textContent || ''
       void sendAssistant(message)
     }
@@ -1089,35 +1096,45 @@ function pushThread(role, content) {
 }
 
 async function sendAssistant(message) {
+  if (assistantPending) return false
+  message = String(message || '').trim()
+  if (!message) return false
+  const requestId = ++assistantRequestId
+  assistantPending = true
   pushThread('user', message)
   renderAssistant()
-  const thread = $('#assistant-thread')
-  if (thread) {
-    thread.insertAdjacentHTML(
-      'beforeend',
-      `<div class="msg ava" id="assistant-typing"><span class="msg-avatar">${icon('spark')}</span><div class="msg-bubble"><span class="typing-dots"><i></i><i></i><i></i></span></div></div>`,
-    )
-    scrollAssistantBottom()
+  let res = null
+  try {
+    try {
+      res = await assistantChat(message)
+    } catch {
+      // 与 core 的网络失败结果保持一致，允许本地说明兜底。
+    }
+    if (requestId !== assistantRequestId) return false
+    if (!res || res.ok === false) res = localAssistant(message)
+    const reply = (res && res.reply) || '我在的。刚才没有听懂你的需求，可以换个说法再告诉我吗？'
+    pushThread('assistant', String(reply))
+    if (res && res.plan) saveLocalPlan(res.plan)
+  } finally {
+    if (requestId === assistantRequestId) {
+      assistantPending = false
+      renderAssistant()
+    }
   }
-  let res = await assistantChat(message)
-  if (!res || res.ok === false) {
-    // 兜底：本地规则版助手
-    res = localAssistant(message)
-  }
-  const typing = $('#assistant-typing')
-  if (typing) typing.remove()
-  const reply = (res && res.reply) || '我在的。刚才没有听懂你的需求，可以换个说法再告诉我吗？'
-  pushThread('assistant', reply)
-  renderAssistant()
   const actions = res && Array.isArray(res.actions) ? res.actions : []
-  if (res && res.plan) {
-    saveLocalPlan(res.plan)
-  }
-  void applyAssistantActions(actions, res)
+  await applyAssistantActions(actions, res, requestId)
+  return true
 }
 
-async function applyAssistantActions(actions, res) {
+function canApplyAssistantNavigation(requestId) {
+  if (requestId !== assistantRequestId || M.tab !== 'assistant') return false
+  const classes = document.body && document.body.classList
+  return !classes || !['kb-open', 'sheet-open', 'call-open'].some((name) => classes.contains(name))
+}
+
+async function applyAssistantActions(actions, res, requestId) {
   for (const action of actions) {
+    if (requestId !== assistantRequestId) return
     const type = action && action.type
     const payload = (action && action.payload) || {}
     if (type === 'create_plan' || type === 'update_plan') {
@@ -1126,6 +1143,7 @@ async function applyAssistantActions(actions, res) {
         saveLocalPlan(plan)
         // 保持当前「助手」页，不自动跳走；用户想查看时自己切到「课程」
         await refreshCourses()
+        if (requestId !== assistantRequestId) return
         const generating = !!(res && res.plan && res.plan.generating) || !!plan.generating
         toast(
           generating
@@ -1135,6 +1153,9 @@ async function applyAssistantActions(actions, res) {
           4200,
         )
       }
+    } else if (!canApplyAssistantNavigation(requestId)) {
+      // 回复仍留在线程里；用户已经开始其他任务时，不替他们切页或打开弹窗。
+      continue
     } else if (type === 'open_scene') {
       // v3.1：全局去场景——自由聊天直接打开通话页（忽略 sceneId）
       ui.openCall(characterById(payload.characterId || 'elena'))
@@ -1214,7 +1235,7 @@ export function renderProfile() {
           <h1 class="m-title">我的</h1>
           <p class="profile-lead">个人资料、学习偏好与本地数据</p>
         </div>
-        <span class="profile-local"><i></i>数据仅保存在本机</span>
+        <span class="profile-local"><i></i>学习记录保存在本机</span>
       </div>
 
       <section class="profile-hero-card">
@@ -1232,9 +1253,9 @@ export function renderProfile() {
           </div>
         </div>
         <div class="ph-stats">
-          <div class="ph-stat"><strong>${esc(streak)}</strong><span>连续天数</span></div>
-          <div class="ph-stat"><strong>${esc(turns)}</strong><span>累计开口</span></div>
-          <div class="ph-stat"><strong>${esc(todayWords)}</strong><span>今日生词</span></div>
+          <div class="ph-stat"><strong data-profile-stat="streak">${esc(streak)}</strong><span>连续天数</span></div>
+          <div class="ph-stat"><strong data-profile-stat="turns">${esc(turns)}</strong><span>累计开口</span></div>
+          <div class="ph-stat"><strong data-profile-stat="today">${esc(todayWords)}</strong><span>今日生词</span></div>
         </div>
       </section>
 
@@ -1270,12 +1291,12 @@ export function renderProfile() {
             <button type="button" class="list-row" data-act="wordbook">
               <span class="list-icon">${icon('book')}</span>
               <div class="list-main"><div class="list-title">今日单词表</div><div class="list-sub">重点单词自动收录，随时复习</div></div>
-              <span class="list-value">${esc(todayWords)} 个${icon('chevron')}</span>
+              <span class="list-value"><span data-profile-wordbook-count>${esc(todayWords)}</span> 个${icon('chevron')}</span>
             </button>
             <button type="button" class="list-row" data-act="mastered">
               <span class="list-icon">${icon('star')}</span>
               <div class="list-main"><div class="list-title">已掌握单词</div><div class="list-sub">间隔复习达到更高记忆盒</div></div>
-              <span class="list-value">${esc(mastered)} 个${icon('chevron')}</span>
+              <span class="list-value"><span data-profile-stat="mastered">${esc(mastered)}</span> 个${icon('chevron')}</span>
             </button>
           </div>
         </section>
@@ -1284,31 +1305,31 @@ export function renderProfile() {
           <section class="p-block">
             <div class="p-block-head">
               <span class="p-block-icon accent">${icon('spark')}</span>
-              <div><h2>兴趣标签</h2><p>用于对话导演与长期记忆</p></div>
+              <div><h2>兴趣标签</h2><p>让话题更贴近你的兴趣</p></div>
             </div>
             <div class="interest-card" id="interest-card">
-              <div class="interest-tags" id="interest-tags">${(Array.isArray((M.profile || {}).interests) ? M.profile.interests : []).map((tag) => `<span class="interest-tag">${esc(tag)}<button type="button" data-act="del-interest" data-tag="${esc(tag)}" aria-label="删除兴趣 ${esc(tag)}">×</button></span>`).join('') || '<span class="interest-empty">还没有兴趣标签，添加几个让 Ava 更懂你。</span>'}</div>
+              <div class="interest-tags" id="interest-tags">${profileInterestTags()}</div>
               <form class="interest-form" id="interest-form" autocomplete="off">
                 <input type="text" class="input" id="interest-input" maxlength="20" placeholder="添加兴趣，如：科幻小说 / 咖啡 / 城市建筑" aria-label="添加兴趣">
                 <button type="submit" class="btn btn-primary btn-sm">${icon('spark')}添加</button>
               </form>
-              <p class="interest-hint">兴趣会用于对话导演和长期记忆，让 Ava 更懂你。</p>
+              <p class="interest-hint">Ava 会参考这些兴趣选择话题；启用云模型时，相关兴趣可能随对话发送。</p>
             </div>
           </section>
 
           <section class="p-block p-plus">
             <div class="p-block-head">
               <span class="p-block-icon warm">${icon('star')}</span>
-              <div><h2>Ava Plus</h2><p>更多角色、无限时长与完整报告</p></div>
-              <span class="m-chip" style="margin-left:auto">占位</span>
+              <div><h2>个人学习空间</h2><p>了解本机记录、模型配置与演示模式</p></div>
+              <span class="m-chip" style="margin-left:auto">${M.settings ? (settings.hasKey ? '已填写模型凭据' : '演示模式') : '配置待确认'}</span>
             </div>
-            <p class="p-plus-desc">当前为本地预览版，订阅能力即将开放；现有功能全部免费可用。</p>
-            <button type="button" class="btn btn-ghost btn-sm" data-act="plus">了解 Ava Plus</button>
+            <p class="p-plus-desc">学习记录保存在本机。启用云 AI 时，相关文本、资料或音频会发送到你配置的服务商。</p>
+            <button type="button" class="btn btn-ghost btn-sm" data-act="usage-help">查看使用说明</button>
           </section>
         </div>
       </div>
 
-      <div class="profile-note">Ava · 全屏沉浸式英语对话 · 资料与进度只保存在这台设备</div>
+      <div class="profile-note">Ava · 个人英语学习空间 · 学习记录保存在本机</div>
     </div>`
 
   bindProfile(host)
@@ -1321,7 +1342,7 @@ function bindProfile(host) {
     const act = target.getAttribute('data-act')
     if (act === 'edit-nick') editNickname()
     else if (act === 'wordbook') void showWordbookSheet()
-    else if (act === 'plus') toast('Ava Plus 还在路上，先把免费功能玩熟吧', 'info', 2400)
+    else if (act === 'usage-help') showUsageHelp()
     else if (act === 'mastered') toast(`已掌握 ${Number((M.progress || {}).masteredWords) || 0} 个单词`, 'ok')
     else if (act === 'del-interest') {
       const tag = target.getAttribute('data-tag') || ''
@@ -1352,8 +1373,10 @@ function bindProfile(host) {
         if (!saved || saved.ok === false) throw new Error((saved && saved.error) || '难度保存失败，请稍后重试')
         const savedValue = saved.level || value
         M.settings = { ...(M.settings || {}), level: savedValue }
+        if (saved.plan && typeof saved.plan === 'object') saveLocalPlan(saved.plan)
         level.value = savedValue
-        toast(`已切换到 ${savedValue} 难度`, 'ok')
+        const lessonError = !!(saved.plan && saved.plan.hasError)
+        toast(saved.message || (lessonError ? '难度已保存，但课件更新未完成，请重试' : `已切换到 ${savedValue} 难度`), lessonError ? 'info' : 'ok', lessonError ? 4200 : 2600)
         renderCourses()
       } catch (err) {
         if (M.settings) M.settings.level = previousValue
@@ -1373,6 +1396,52 @@ function currentInterests() {
   return list.map((tag) => String(tag || '').trim()).filter(Boolean)
 }
 
+function profileInterestTags() {
+  return currentInterests().map((tag) => `<span class="interest-tag">${esc(tag)}<button type="button" data-act="del-interest" data-tag="${esc(tag)}" aria-label="删除兴趣 ${esc(tag)}">×</button></span>`).join('') || '<span class="interest-empty">还没有兴趣标签，添加几个让 Ava 更懂你。</span>'
+}
+
+function showUsageHelp() {
+  const mode = !M.settings
+    ? '模型配置尚未读取，请打开“模型与语音设置”确认。'
+    : M.settings.hasKey
+      ? '已填写文字模型凭据，实际可用性以请求结果为准。'
+      : '当前为文字演示模式：未配置文字模型时，部分对话和总结使用规则示例，不能作为真实模型效果。'
+  ui.openSheet('使用说明', `<div class="kb-confirm">
+    <p><strong>当前模式</strong><br>${esc(mode)}</p>
+    <p><strong>学习记录</strong><br>记录保存在运行 Ava 的这台电脑；昵称与书库进度保存在当前浏览器。更换浏览器不会自动同步。</p>
+    <p><strong>配置自己的 AI 服务</strong><br>在“我的 → 模型与语音设置”填写自己的凭据。文字模型、实时语音与角色朗读需要相应服务权限，调用费用由你配置的服务商计收。</p>
+    <p><strong>云服务请求</strong><br>启用云 AI 后，相关聊天文字、资料片段、兴趣或音频会发送到所配置的服务商。</p>
+  </div>`)
+}
+
+/** 后台结果只更新数据区域，保留正在编辑的输入、光标和保存按钮状态。 */
+function updateProfileSummary() {
+  const host = $('#screen-profile')
+  if (!host) return
+  if (!host.querySelector('.profile-page')) {
+    renderProfile()
+    return
+  }
+  const progress = M.progress || {}
+  const days = M.wordbook && Array.isArray(M.wordbook.days) ? M.wordbook.days : []
+  const day = days.find((item) => String(item.label || '') === '今天') || days[0]
+  const values = {
+    streak: Number(progress.streak) || 0,
+    turns: Number(progress.totalTurns) || 0,
+    today: Number(day && day.count) || 0,
+    mastered: Number(progress.masteredWords) || 0,
+  }
+  Object.entries(values).forEach(([key, value]) => {
+    const el = $(`[data-profile-stat="${key}"]`, host)
+    if (el) el.textContent = String(value)
+  })
+  const wordbookCount = $('[data-profile-wordbook-count]', host)
+  if (wordbookCount) wordbookCount.textContent = String(values.today)
+  const tags = $('#interest-tags', host)
+  const tagsHtml = profileInterestTags()
+  if (tags && tags.innerHTML !== tagsHtml) tags.innerHTML = tagsHtml
+}
+
 /** 保存兴趣标签（PUT /api/profile），中文反馈。 */
 async function saveInterests(next) {
   const dedup = [...new Set(next.map((tag) => String(tag || '').trim()).filter(Boolean))].slice(0, 20)
@@ -1384,7 +1453,7 @@ async function saveInterests(next) {
   const saved = res.profile && Array.isArray(res.profile.interests) ? res.profile.interests.map(String) : dedup
   M.profile = { ...(M.profile || {}), interests: saved }
   toast('兴趣已保存', 'ok', 2200)
-  if (M.tab === 'profile') renderProfile()
+  if (M.tab === 'profile') updateProfileSummary()
 }
 
 async function editNickname() {
@@ -1420,7 +1489,7 @@ async function editNickname() {
 /** 我的页异步刷新统计（进入页面时调用）。 */
 export async function refreshProfileStats() {
   await Promise.all([loadWordbook(), loadProgress(), loadProfile()])
-  if (M.tab === 'profile') renderProfile()
+  if (M.tab === 'profile') updateProfileSummary()
 }
 
 /* ==========================================================================

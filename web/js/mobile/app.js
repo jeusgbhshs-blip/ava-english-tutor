@@ -10,6 +10,8 @@ import {
 } from './core.js'
 import { renderTab, refreshCourses, refreshProfileStats } from './screens.js'
 import { setBrowserTTSEnabled } from '../speech.js'
+import { createDialogController } from './dialog.js'
+import { createOverlayHistory } from './navigation.js'
 import { openKbPanel, closeKbPanel, isKbOpen, kbState } from './kb.js'
 import { openCall, onSheetClosed, getCallState, previewSpeaking, togglePtt, cancelPtt, simulateTranscript, micDiagnostics } from './call.js'
 import {
@@ -20,11 +22,13 @@ const TABS = ['courses', 'chat', 'assistant', 'review', 'profile']
 
 // v3.8：手机版关闭浏览器内置语音，只用豆包角色原声（用户要求）
 setBrowserTTSEnabled(false)
-const VERSION = 'v3.3'
+const VERSION = 'v3.3-personal.1'
 
 /* ------------------------------ 运行期状态 ------------------------------ */
 let booted = false
 let sheetOpen = false
+let sheetController = null
+let sheetGeneration = 0
 const errors = []
 
 /* ------------------------------ 错误收集（供 QA 探测） ------------------------------ */
@@ -42,7 +46,7 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 
 /* ------------------------------ 全屏人物世界（v1.7） ------------------------------ */
-const world = { a: null, b: null, active: 0, src: '' }
+const world = { a: null, b: null, active: 0, src: '', generation: 0 }
 
 function initWorld() {
   world.a = $('#world-img-a')
@@ -79,49 +83,51 @@ function setWorld(character, opts = {}) {
   document.body.dataset.char = character.id
   if (world.src !== src) {
     const current = world.active === 0 ? world.a : world.b
-    const next = world.active === 0 ? world.b : world.a
+    const nextIndex = world.active === 0 ? 1 : 0
+    const next = nextIndex === 0 ? world.a : world.b
+    const generation = ++world.generation
+    let revealed = false
     world.src = src
     const reveal = () => {
+      if (generation !== world.generation || revealed) return
+      revealed = true
       next.classList.add('is-on')
       current.classList.remove('is-on')
-      world.active = world.active === 0 ? 1 : 0
+      world.active = nextIndex
     }
     next.onload = reveal
     next.onerror = () => {
+      if (generation !== world.generation || revealed) return
       next.onerror = null
       const svg = '/assets/characters/' + character.id + '.svg'
       if (next.getAttribute('src') !== svg) next.src = svg
       else reveal()
     }
     next.src = src
-    if (opts.instant) reveal()
+    if (opts.instant && next.complete && next.naturalWidth > 0) reveal()
   }
   const tint = $('#world-tint')
   if (tint) tint.style.setProperty('--theme', theme)
 }
 
 /* ------------------------------ 历史记录（手机返回键） ------------------------------ */
+const overlayHistory = createOverlayHistory({
+  history,
+  getOverlay: () => sheetOpen ? 'sheet' : isKbOpen() ? 'kb' : getCallState().open ? 'call' : null,
+  onBack: onBackKey,
+})
+
 function pushOverlay(kind) {
-  try {
-    if (history.state && history.state.ava === kind) return
-    history.pushState({ ava: kind }, '')
-  } catch {
-    /* 无痕模式等忽略 */
-  }
+  overlayHistory.open(kind)
 }
 
 function clearOverlayHistory() {
-  try {
-    if (history.state && history.state.ava) history.replaceState(null, '')
-  } catch {
-    /* 忽略 */
-  }
+  overlayHistory.sync()
 }
 
 function onBackKey() {
   if (sheetOpen) {
-    hideSheet()
-    notifySheetClosed()
+    closeSheet()
     return true
   }
   if (isKbOpen()) {
@@ -144,16 +150,7 @@ function onBackKey() {
   return false
 }
 
-window.addEventListener('popstate', () => {
-  // 浏览器返回：优先关弹层，其次退出通话页；都不在时不拦截（正常离开页面）
-  const handled = onBackKey()
-  if (handled) {
-    // 弹层/通话关闭后清掉我们压入的历史标记，避免下次多按一次返回
-    setTimeout(() => {
-      if (!sheetOpen && !getCallState().open) clearOverlayHistory()
-    }, 90)
-  }
-})
+window.addEventListener('popstate', () => overlayHistory.onPopState())
 
 /* ------------------------------ Tab 切换 ------------------------------ */
 /** v3.3：各 Tab 的滚动位置记忆（离开时保存、回来时恢复，避免每次跳回顶部）。 */
@@ -234,51 +231,69 @@ export function switchTab(tab, opts = {}) {
 }
 
 /* ------------------------------ 弹层 ------------------------------ */
-export function openSheet(title, html) {
+function getSheetController() {
+  if (sheetController) return sheetController
   const sheet = $('#sheet')
   const backdrop = $('#sheet-backdrop')
   const body = $('#sheet-body')
   const titleEl = $('#sheet-title')
-  if (!sheet || !backdrop) return
-  if (titleEl) titleEl.textContent = title || '提示'
-  if (body) body.innerHTML = html == null ? '' : String(html)
-  sheet.hidden = false
-  backdrop.hidden = false
-  sheetOpen = true
-  document.body.classList.add('sheet-open')
-  pushOverlay('sheet')
+  if (!sheet || !backdrop) return null
+  sheetController = createDialogController({
+    dialog: sheet, backdrop, body, title: titleEl,
+    getBackground: () => ['#screens', '#tabbar', '#kb-screen', '#call'].map((selector) => $(selector)).filter(Boolean),
+    getFallbackFocus: () => getCallState().open ? $('#call-back') : $('#tabbar [aria-selected="true"]'),
+  })
+  return sheetController
 }
 
-function hideSheet() {
-  const sheet = $('#sheet')
-  const backdrop = $('#sheet-backdrop')
-  if (sheet) sheet.hidden = true
-  if (backdrop) backdrop.hidden = true
+export function openSheet(title, html, options = {}) {
+  const controller = getSheetController()
+  if (!controller) return null
+  sheetOpen = true
+  sheetGeneration++
+  document.body.classList.add('sheet-open')
+  pushOverlay('sheet')
+  return controller.open(title, html, options)
+}
+
+export function isSheetCurrent(token) {
+  return !!sheetController?.isCurrent(token)
+}
+
+export function updateSheet(token, title, html) {
+  return sheetController?.update(token, title, html) || false
+}
+
+function hideSheet(token) {
+  if (!sheetController?.currentId || (token !== undefined && !sheetController.isCurrent(token))) return false
   sheetOpen = false
+  sheetGeneration++
   document.body.classList.remove('sheet-open')
+  return sheetController.close(token)
 }
 
 /** 关闭弹层并通知 call.js（通话总结关闭后结束通话）。 */
-export function closeSheet() {
+export function closeSheet(token) {
+  if (!hideSheet(token)) return false
   if (!sheetOpen) {
-    hideSheet()
-    return
+    clearOverlayHistory()
+    notifySheetClosed()
   }
-  hideSheet()
-  clearOverlayHistory()
-  notifySheetClosed()
+  return true
 }
 
 function notifySheetClosed() {
   // 放到当前调用栈之后：call.js 的「再聊一会」会先同步把 endAfterSheet 置 false
-  setTimeout(() => {
+  const generation = sheetGeneration
+  queueMicrotask(() => {
+    if (sheetOpen || sheetGeneration !== generation) return
     try {
       onSheetClosed()
     } catch (err) {
       console.error('[mobile] sheet 关闭回调失败：', err)
     }
     if (!getCallState().open) clearOverlayHistory()
-  }, 40)
+  })
 }
 
 /* ------------------------------ 知识库面板（v1.8） ------------------------------ */
@@ -295,7 +310,7 @@ function showKbPanel() {
 function hideKbPanel() {
   if (!isKbOpen()) return
   closeKbPanel()
-  if (history.state && history.state.ava === 'kb') clearOverlayHistory()
+  clearOverlayHistory()
 }
 
 /* ------------------------------ 通话入口 ------------------------------ */
@@ -321,6 +336,8 @@ async function startCall(characterOrId, sceneIdx = 0, opts = {}) {
 
 /* ------------------------------ 外壳事件绑定 ------------------------------ */
 function bindChrome() {
+  document.addEventListener('pointerdown', () => { document.body.dataset.input = 'pointer' }, { capture: true })
+  document.addEventListener('keydown', () => { document.body.dataset.input = 'keyboard' }, { capture: true })
   const tabbar = $('#tabbar')
   if (tabbar) {
     tabbar.addEventListener('click', (event) => {
@@ -329,11 +346,11 @@ function bindChrome() {
       switchTab(btn.getAttribute('data-tab') || 'courses')
     })
     tabbar.addEventListener('keydown', (event) => {
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+      if (event.altKey || event.ctrlKey || event.metaKey || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
       event.preventDefault()
       const idx = TABS.indexOf(M.tab)
       const delta = event.key === 'ArrowRight' ? 1 : -1
-      const next = TABS[(idx + delta + TABS.length) % TABS.length]
+      const next = event.key === 'Home' ? TABS[0] : event.key === 'End' ? TABS.at(-1) : TABS[(idx + delta + TABS.length) % TABS.length]
       switchTab(next)
       const btn = tabbar.querySelector(`[data-tab="${next}"]`)
       if (btn) btn.focus()
@@ -365,13 +382,20 @@ function bindChrome() {
   }
 
   document.addEventListener('keydown', (event) => {
+    if (event.defaultPrevented || event.isComposing) return
+    if (event.key === 'Escape' && event.repeat) {
+      event.preventDefault()
+      return
+    }
     const tag = event.target && event.target.tagName
     const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (event.target && event.target.isContentEditable)
+    const interactive = !!event.target?.closest?.('button, a[href], [role="button"], [role="tab"], [role="switch"], [role="checkbox"], audio, video')
+    const shortcut = !event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey
     // v2.2：通话页 PTT——空格开始/结束，Esc 取消录音（输入框聚焦时不拦截）
     if (!typing && getCallState().open && !sheetOpen) {
-      if (event.key === ' ' || event.code === 'Space') {
+      if ((event.key === ' ' || event.code === 'Space') && !event.metaKey && !event.ctrlKey && !event.altKey && !interactive) {
         event.preventDefault()
-        togglePtt()
+        if (!event.repeat) togglePtt()
         return
       }
       if (event.key === 'Escape' && (getCallState().ptt === 'recording' || getCallState().ptt === 'submitting' || getCallState().ptt === 'connecting')) {
@@ -381,8 +405,9 @@ function bindChrome() {
       }
     }
     // v2.8：键盘 1-5 切换游戏 HUD 页面（4 = 复习，小游戏统一收敛到复习页）
-    if (!typing && !event.metaKey && !event.ctrlKey && !event.altKey && /^[1-5]$/.test(event.key)) {
+    if (!typing && shortcut && /^[1-5]$/.test(event.key)) {
       if (sheetOpen || getCallState().open) return
+      if (M.tab === 'review' && getReviewState().view !== 'home') return
       event.preventDefault()
       switchTab(TABS[Number(event.key) - 1])
       return
@@ -426,6 +451,8 @@ function registerUi() {
     closeKbPanel: hideKbPanel,
     openSheet,
     closeSheet,
+    isSheetCurrent,
+    updateSheet,
     openWordbookSheet: () => showWordbookSheet(),
     setCharacter,
     setWorld: (character) => setWorld(character),
@@ -473,11 +500,8 @@ async function loadInitialData() {
   // 我的页统计不阻塞首屏
   void Promise.allSettled([loadProgress(), loadWordbook()]).then(() => {
     if (M.tab === 'profile') {
-      try {
-        renderTab('profile')
-      } catch {
-        /* 忽略 */
-      }
+      // Update statistics without replacing an in-progress personal settings form.
+      void refreshProfileStats().catch(() => {})
     }
   })
 }

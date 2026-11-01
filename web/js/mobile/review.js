@@ -119,6 +119,7 @@ const R = {
 }
 
 let summaryPromise = null
+let reviewSpeechToken = 0
 
 /* ==========================================================================
    小工具
@@ -194,6 +195,12 @@ function loadAnySessionDraft() {
 
 function saveSessionDraft(s) {
   if (!s || !Array.isArray(s.words) || !s.words.length) return
+  // 已成功评分的词不能因为反馈动画尚未结束，再次成为恢复入口。
+  const resumeIndex = s.index + (s.advancePending ? 1 : 0)
+  if (resumeIndex >= s.words.length) {
+    clearSessionDraft()
+    return
+  }
   try {
     localStorage.setItem(
       SESSION_DRAFT_KEY,
@@ -201,7 +208,7 @@ function saveSessionDraft(s) {
         date: todayKey(),
         mode: s.mode,
         words: s.words,
-        index: s.index,
+        index: resumeIndex,
         answers: s.answers || [],
         startedAt: s.startedAt || Date.now(),
       }),
@@ -509,20 +516,18 @@ export async function onReviewTabEnter() {
 
 /** 离开复习 Tab：停止小游戏计时器与朗读（复习会话保留，回来可继续）。 */
 export function onReviewTabLeave() {
+  cancelSessionFocus()
   if (R.session) saveSessionDraft(R.session)
   cleanupGame()
   if (R.view === 'game') R.view = 'home'
-  try {
-    tts.cancel()
-  } catch {
-    /* 忽略 */
-  }
 }
 
 /** 复习页返回键：有子视图时回到复习首页。 */
 export function reviewHandleBack() {
   if (M.tab !== 'review') return false
   if (R.view === 'home') return false
+  stopReviewAudio()
+  cancelSessionFocus()
   if (R.session) {
     saveSessionDraft(R.session)
     R.session = null
@@ -748,6 +753,7 @@ async function refreshHome() {
    复习会话
    ========================================================================== */
 async function startSession(mode = 'due', presetWords = null) {
+  cancelSessionFocus()
   let draft = !(Array.isArray(presetWords) && presetWords.length) ? loadSessionDraft(mode) : null
   if (!draft && !(Array.isArray(presetWords) && presetWords.length) && mode === 'due') draft = loadAnySessionDraft()
   if (draft && draft.index < draft.words.length) {
@@ -795,6 +801,7 @@ async function startSession(mode = 'due', presetWords = null) {
     words = presetWords.slice()
   } else if (mode === 'extra') {
     const res = await listApi({ status: 'all', limit: 500 })
+    if (R.session !== s) return { ok: false, error: '会话已取消或替换' }
     if (!res || res.ok === false) {
       toast((res && res.error) || '读取词库失败，请稍后重试', 'bad', 3000)
       R.session = null
@@ -805,6 +812,7 @@ async function startSession(mode = 'due', presetWords = null) {
     words = shuffle((res.words || []).filter((w) => w && w.word)).slice(0, 12)
   } else {
     const res = await getDueApi(40)
+    if (R.session !== s) return { ok: false, error: '会话已取消或替换' }
     if (!res || res.ok === false) {
       toast((res && res.error) || '读取今日到期单词失败', 'bad', 3000)
       R.session = null
@@ -839,9 +847,10 @@ function currentWord() {
   return s.words[Math.min(s.index, s.words.length - 1)] || null
 }
 
-function paintSession() {
+function paintSession({ focusCard = false } = {}) {
   const host = reviewHost()
   if (!host) return
+  host.onkeydown = onSessionKeydown
   const s = R.session
   if (!s) {
     paintHome()
@@ -896,9 +905,9 @@ function paintSession() {
           <span class="rv-chip ok rv-session-score">${icon('check')}认识 ${goodCount}</span>
         </div>
 
-        <div class="rv-card${s.flipped ? ' is-flipped' : ''}" data-act="card" role="button" tabindex="0" aria-label="单词卡片，点击翻转查看释义">
+        <div class="rv-card${s.flipped ? ' is-flipped' : ''}" data-act="card" role="button" tabindex="0" aria-keyshortcuts="Enter Space" aria-label="单词卡片，按回车或空格查看释义">
           <div class="rv-card-inner">
-            <div class="rv-face front">
+            <div class="rv-face front" aria-hidden="${s.flipped ? 'true' : 'false'}"${s.flipped ? ' inert' : ''}>
               <div class="rv-card-eyebrow">Word card · 点击卡片翻转</div>
               <div class="rv-word-row">
                 <span class="rv-word" data-act="speak" role="button" tabindex="0" title="点击朗读">${esc(word.word)}</span>
@@ -907,7 +916,7 @@ function paintSession() {
               <div class="rv-card-tip">点单词或喇叭听发音 · 点卡片看释义</div>
               <button type="button" class="rv-flip-btn" data-act="flip">查看释义 →</button>
             </div>
-            <div class="rv-face back">
+            <div class="rv-face back" aria-hidden="${s.flipped ? 'false' : 'true'}"${s.flipped ? '' : ' inert'}>
               <div class="rv-back-word">
                 <span class="rv-word small">${esc(word.word)}</span>
                 <button type="button" class="rv-speak" style="width:42px;height:42px" data-act="speak" aria-label="朗读 ${esc(word.word)}">${icon('volume')}</button>
@@ -926,16 +935,43 @@ function paintSession() {
         </div>
 
         <div class="rv-grades">
-          <button type="button" class="rv-grade" data-grade="again" ${s.grading ? 'disabled' : ''}><strong>不认识</strong><em>Again · 10 分钟后</em></button>
-          <button type="button" class="rv-grade" data-grade="hard" ${s.grading ? 'disabled' : ''}><strong>模糊</strong><em>Hard · 稍后</em></button>
-          <button type="button" class="rv-grade" data-grade="good" ${s.grading ? 'disabled' : ''}><strong>认识</strong><em>Good · 间隔加长</em></button>
-          <button type="button" class="rv-grade" data-grade="easy" ${s.grading ? 'disabled' : ''}><strong>简单</strong><em>Easy · 更久以后</em></button>
+          <button type="button" class="rv-grade" data-grade="again" aria-keyshortcuts="1" ${s.grading ? 'disabled' : ''}><strong>不认识</strong><em>1 · Again · 10 分钟后</em></button>
+          <button type="button" class="rv-grade" data-grade="hard" aria-keyshortcuts="2" ${s.grading ? 'disabled' : ''}><strong>模糊</strong><em>2 · Hard · 稍后</em></button>
+          <button type="button" class="rv-grade" data-grade="good" aria-keyshortcuts="3" ${s.grading ? 'disabled' : ''}><strong>认识</strong><em>3 · Good · 间隔加长</em></button>
+          <button type="button" class="rv-grade" data-grade="easy" aria-keyshortcuts="4" ${s.grading ? 'disabled' : ''}><strong>简单</strong><em>4 · Easy · 更久以后</em></button>
         </div>
         <div class="rv-session-hint ${esc(s.feedbackTone || '')}" id="rv-session-hint" role="status" aria-live="polite">${esc(s.feedback || '先翻转卡片看释义，再按真实记忆程度评分。')}</div>
       </div>
     </div>`
   host.onclick = onSessionClick
   void hydrateExampleTranslations(host)
+  if (focusCard && M.tab === 'review' && R.view === 'session' && R.session === s) {
+    host.querySelector('.rv-card')?.focus({ preventScroll: true })
+  }
+}
+
+/** 只在复习会话内处理快捷键，不抢输入法、编辑框或原生按钮的 Enter/Space。 */
+function onSessionKeydown(event) {
+  if (event.defaultPrevented || event.repeat || event.isComposing || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
+  if (M.tab !== 'review' || R.view !== 'session' || !R.session || R.session.loading) return
+  const target = event.target
+  const tag = target && target.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable)) return
+  if (/^[1-4]$/.test(event.key)) {
+    event.preventDefault()
+    void gradeCurrent(['again', 'hard', 'good', 'easy'][Number(event.key) - 1])
+    return
+  }
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  if (!target || tag === 'BUTTON' || tag === 'A' || typeof target.getAttribute !== 'function') return
+  const act = target.getAttribute('data-act')
+  if (act === 'card') {
+    event.preventDefault()
+    flipCard()
+  } else if (act === 'speak') {
+    event.preventDefault()
+    speakWord(currentWord() && currentWord().word)
+  }
 }
 
 function onSessionClick(event) {
@@ -951,6 +987,8 @@ function onSessionClick(event) {
   if (!target) return
   const act = target.getAttribute('data-act')
   if (act === 'exit') {
+    stopReviewAudio()
+    cancelSessionFocus()
     saveSessionDraft(s)
     R.session = null
     R.view = 'home'
@@ -975,7 +1013,17 @@ function flipCard() {
   s.flipped = true
   const host = reviewHost()
   const card = host && host.querySelector('.rv-card')
-  if (card) card.classList.add('is-flipped')
+  if (card) {
+    const front = card.querySelector('.front')
+    const back = card.querySelector('.back')
+    // 查看释义按钮会随正面隐藏，先把其焦点移到一直可用的卡片容器。
+    if (front && front.contains(document.activeElement) && M.tab === 'review' && R.view === 'session') {
+      card.focus({ preventScroll: true })
+    }
+    if (front) { front.inert = true; front.setAttribute('aria-hidden', 'true') }
+    if (back) { back.inert = false; back.setAttribute('aria-hidden', 'false') }
+    card.classList.add('is-flipped')
+  }
   const hint = document.getElementById('rv-session-hint')
   if (hint) {
     hint.className = 'rv-session-hint'
@@ -1056,29 +1104,67 @@ function notifyTtsUnavailable() {
   toast('发音暂不可用，请稍后再试', 'info', 2600)
 }
 
+/** 页面离开与新朗读共用同一取消代次，避免迟到的音频/错误提示打扰新页面。 */
+function stopReviewAudio() {
+  reviewSpeechToken += 1
+  try { stopCharacterText() } catch { /* 忽略 */ }
+  try { tts.cancel() } catch { /* 忽略 */ }
+}
+
 /** 朗读单词：使用当前计划的老师原声（豆包 TTS）；浏览器 TTS 已关闭。 */
 function speakWord(value) {
   const text = String(value == null ? '' : value).trim()
   if (!text) return
+  stopReviewAudio()
+  const token = reviewSpeechToken
   void (async () => {
-    try {
-      stopCharacterText()
-    } catch {
-      /* 忽略 */
-    }
     try {
       const characterId = (M.plan && M.plan.teacherId) || 'elena'
       const ok = await playCharacterText(text, { characterId })
-      if (!ok) notifyTtsUnavailable()
+      if (!ok && token === reviewSpeechToken && M.tab === 'review') notifyTtsUnavailable()
     } catch {
-      notifyTtsUnavailable()
+      if (token === reviewSpeechToken && M.tab === 'review') notifyTtsUnavailable()
     }
   })()
 }
 
+function cancelSessionFocus(s = R.session) {
+  if (s && s.cancelFocusRestore) s.cancelFocusRestore()
+}
+
+/** 只延续仍在操作卡片/评分区的焦点；离页、移焦或点其他区域立即放弃。 */
+function trackSessionCardFocus(s, host) {
+  cancelSessionFocus(s)
+  const card = host && host.querySelector('.rv-card')
+  const grades = host && host.querySelector('.rv-grades')
+  const inside = (target) => !!target && !!((card && card.contains(target)) || (grades && grades.contains(target)))
+  if (!card || M.tab !== 'review' || R.view !== 'session' || !inside(document.activeElement)) return () => false
+  let active = true
+  const outside = (event) => { if (!inside(event.target)) cancel() }
+  const cancel = () => {
+    active = false
+    document.removeEventListener('pointerdown', outside, true)
+    document.removeEventListener('focusin', outside, true)
+    window.removeEventListener?.('blur', cancel)
+    if (s.cancelFocusRestore === cancel) s.cancelFocusRestore = null
+  }
+  s.cancelFocusRestore = cancel
+  document.addEventListener('pointerdown', outside, true)
+  document.addEventListener('focusin', outside, true)
+  window.addEventListener?.('blur', cancel)
+  // 禁用当前评分按钮可能使焦点退到 body；提前留在不会被禁用的卡片上。
+  card.focus({ preventScroll: true })
+  return () => {
+    const restore = active && R.session === s && R.view === 'session' && M.tab === 'review'
+      && inside(document.activeElement) && (typeof document.hasFocus !== 'function' || document.hasFocus())
+    cancel()
+    return restore
+  }
+}
+
 async function gradeCurrent(grade) {
   const s = R.session
-  if (!s || s.grading) return
+  if (!s || s.grading || s.advancePending) return
   const word = currentWord()
   if (!word) return
   if (!s.flipped) {
@@ -1087,6 +1173,7 @@ async function gradeCurrent(grade) {
   }
   if (!GRADE_LABEL[grade]) return
   const host = reviewHost()
+  const finishFocusTracking = trackSessionCardFocus(s, host)
   s.grading = true
   if (host) {
     host.querySelectorAll('.rv-grade').forEach((btn) => {
@@ -1096,9 +1183,10 @@ async function gradeCurrent(grade) {
   setSessionHint('正在记录这次复习…', '')
 
   const res = await gradeApi(word.word, grade)
-  if (R.session !== s) return
-  s.grading = false
+  if (R.session !== s) { finishFocusTracking(); return }
   if (!res || res.ok === false) {
+    finishFocusTracking()
+    s.grading = false
     if (host) {
       host.querySelectorAll('.rv-grade').forEach((btn) => {
         btn.disabled = false
@@ -1120,10 +1208,14 @@ async function gradeCurrent(grade) {
   })
   s.feedback = `${GRADE_LABEL[grade]} · ${dueLabel ? `${dueLabel}复习` : '已记录'}${grade === 'again' || grade === 'hard' ? ' · 很快会再见到它' : ''}`
   s.feedbackTone = 'ok'
+  s.advancePending = true
   setSessionHint(s.feedback, 'ok')
   saveSessionDraft(s)
   window.setTimeout(() => {
+    const focusCard = finishFocusTracking()
     if (R.session !== s) return
+    s.grading = false
+    s.advancePending = false
     if (s.index + 1 >= s.words.length) {
       finishSession()
     } else {
@@ -1132,7 +1224,7 @@ async function gradeCurrent(grade) {
       s.feedback = ''
       s.feedbackTone = ''
       saveSessionDraft(s)
-      paintSession()
+      paintSession({ focusCard })
     }
   }, 520)
 }
@@ -1347,7 +1439,7 @@ function paintManage() {
 }
 
 function bindManage(host) {
-  host.onclick = (event) => {
+  host.onclick = async (event) => {
     const filterBtn = event.target instanceof Element ? event.target.closest('[data-filter]') : null
     if (filterBtn) {
       const next = filterBtn.getAttribute('data-filter') || 'unfamiliar'
@@ -1373,8 +1465,9 @@ function bindManage(host) {
     } else if (act === 'toggle-add') {
       toggleAddPanel()
     } else if (act === 'reload') {
-      void loadManageWords()
-      toast('词库已刷新', 'ok', 1600)
+      if (R.manage.loading) return
+      const loaded = await loadManageWords()
+      if (loaded && R.view === 'manage' && M.tab === 'review') toast('词库已刷新', 'ok', 1600)
     } else if (act === 'speak') {
       speakWord(word)
     } else if (act === 'speak-example') {
@@ -1454,11 +1547,14 @@ function renderWordList() {
   const list = document.getElementById('rv-wordlist')
   const more = document.getElementById('rv-list-more')
   if (!list) return
-  if (m.loading) {
+  list.setAttribute('aria-busy', String(m.loading))
+  const host = reviewHost()
+  if (host) host.querySelectorAll('[data-act="reload"]').forEach((button) => { button.disabled = m.loading })
+  if (m.loading && !m.words.length) {
     renderWordListLoading()
     return
   }
-  if (m.error) {
+  if (m.error && !m.words.length) {
     list.innerHTML = `<div class="rv-empty">
       <span class="rv-empty-orb">${icon('close')}</span>
       <strong>词库读取失败</strong>
@@ -1496,7 +1592,12 @@ function renderWordList() {
   }
 
   const deleting = m.deleting
-  list.innerHTML = m.words
+  const notice = m.loading
+    ? '<div class="rv-list-more" role="status">正在更新词库，保留上次读取的内容…</div>'
+    : m.error
+      ? `<div class="rv-list-more" role="alert"><strong>刷新失败：</strong>${esc(m.error)}。以下保留上次读取的内容。<button type="button" class="btn btn-ghost btn-sm" data-act="reload">${icon('refresh')}重试</button></div>`
+      : ''
+  list.innerHTML = notice + m.words
     .map((word, index) => {
       const status = word.status === 'known' ? 'known' : word.status === 'learning' ? 'learning' : 'new'
       const isKnown = status === 'known'
@@ -1560,15 +1661,15 @@ async function loadManageWords({ quiet = false } = {}) {
   const m = R.manage
   if (m.loading) {
     m.queued = true
-    return
+    return false
   }
   const token = (m.loadToken += 1)
   m.loading = true
   m.error = ''
   m.deleting = ''
-  renderWordListLoading()
+  renderWordList()
   const res = await listApi({ status: 'all', q: m.q, limit: 500 })
-  if (token !== m.loadToken) return
+  if (token !== m.loadToken) return false
   m.loading = false
   if (!res || res.ok === false) {
     m.error = (res && res.error) || '词库读取失败，请稍后重试'
@@ -1578,7 +1679,7 @@ async function loadManageWords({ quiet = false } = {}) {
       m.queued = false
       window.setTimeout(() => void loadManageWords({ quiet: true }), 0)
     }
-    return
+    return false
   }
   m.counts = normalizeCounts(res.counts) || m.counts
   if (m.counts) applySummary(m.counts)
@@ -1601,6 +1702,7 @@ async function loadManageWords({ quiet = false } = {}) {
     m.queued = false
     window.setTimeout(() => void loadManageWords({ quiet: true }), 0)
   }
+  return true
 }
 
 async function updateWordStatus(word, status) {
@@ -1737,11 +1839,7 @@ function cleanupGame() {
     }
     R.game.cleanup = null
   }
-  try {
-    tts.cancel()
-  } catch {
-    /* 忽略 */
-  }
+  stopReviewAudio()
 }
 
 function paintGame() {

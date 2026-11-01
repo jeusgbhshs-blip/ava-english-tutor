@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0d16">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="./css/glass.css">
   <link rel="stylesheet" href="./css/call-redesign.css">
   <link rel="stylesheet" href="./css/library.css">
+<link rel="stylesheet" href="./css/interaction.css">
 </head>
 <body>
 <!-- 图标精灵（全部内联 SVG） -->
@@ -69,11 +70,11 @@
 
   <!-- ============ 屏幕区 ============ -->
   <main class="screens" id="screens">
-    <section class="screen" id="screen-courses" hidden aria-label="课程"></section>
-    <section class="screen screen-hero" id="screen-chat" hidden aria-label="对话"></section>
-    <section class="screen" id="screen-assistant" hidden aria-label="Ava 助手"></section>
-    <section class="screen" id="screen-profile" hidden aria-label="我的"></section>
-    <section class="screen" id="screen-review" hidden aria-label="复习"></section>
+    <section class="screen" id="screen-courses" role="tabpanel" aria-labelledby="tab-courses" hidden></section>
+    <section class="screen screen-hero" id="screen-chat" role="tabpanel" aria-labelledby="tab-chat" hidden></section>
+    <section class="screen" id="screen-assistant" role="tabpanel" aria-labelledby="tab-assistant" hidden></section>
+    <section class="screen" id="screen-profile" role="tabpanel" aria-labelledby="tab-profile" hidden></section>
+    <section class="screen" id="screen-review" role="tabpanel" aria-labelledby="tab-review" hidden></section>
   </main>
 
   <!-- ============ 知识库整屏面板（助手页入口，v1.8） ============ -->
@@ -81,25 +82,25 @@
 
   <!-- ============ 底部 5 Tab（游戏 HUD 导航，键盘 1-5；v2.8 移除「趣玩」，小游戏统一到「复习」） ============ -->
   <nav class="tabbar" id="tabbar" role="tablist" aria-label="主导航">
-    <button type="button" class="tab is-active" data-tab="courses" data-key="1" role="tab" aria-selected="true">
+    <button type="button" class="tab is-active" id="tab-courses" data-tab="courses" data-key="1" role="tab" aria-controls="screen-courses" aria-selected="true">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-home"></use></svg>
       <span>课程</span><em class="tab-key">1</em>
     </button>
-    <button type="button" class="tab" data-tab="chat" data-key="2" role="tab" aria-selected="false">
+    <button type="button" class="tab" id="tab-chat" data-tab="chat" data-key="2" role="tab" aria-controls="screen-chat" aria-selected="false">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-chat"></use></svg>
       <span>对话</span><em class="tab-key">2</em>
     </button>
-    <button type="button" class="tab tab-assistant" data-tab="assistant" data-key="3" role="tab" aria-selected="false">
+    <button type="button" class="tab tab-assistant" id="tab-assistant" data-tab="assistant" data-key="3" role="tab" aria-controls="screen-assistant" aria-selected="false">
       <span class="tab-orb"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-spark"></use></svg></span>
       <span>助手</span><em class="tab-key">3</em>
     </button>
     <!-- v2.8：复习（SRS 单词复习 + 词库 + 小游戏），游戏统一收敛到这里 -->
-    <button type="button" class="tab tab-review" data-tab="review" data-key="4" role="tab" aria-selected="false" aria-label="复习">
+    <button type="button" class="tab tab-review" id="tab-review" data-tab="review" data-key="4" role="tab" aria-controls="screen-review" aria-selected="false" aria-label="复习">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="12" height="16" rx="2.6"/><path d="M8 2.6h9.4A2.6 2.6 0 0 1 20 5.2V16"/><path d="M6.8 10h4.4M6.8 13.5h4.4M6.8 17h2.6"/></svg>
       <span>复习</span><em class="tab-key">4</em>
       <i class="tab-due" id="tab-due" hidden>0</i>
     </button>
-    <button type="button" class="tab" data-tab="profile" data-key="5" role="tab" aria-selected="false">
+    <button type="button" class="tab" id="tab-profile" data-tab="profile" data-key="5" role="tab" aria-controls="screen-profile" aria-selected="false">
       <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-user"></use></svg>
       <span>我的</span><em class="tab-key">5</em>
     </button>
@@ -125,7 +126,7 @@
         <div class="call-name-row">
           <span class="call-name" id="call-name">Elena</span>
           <span class="call-verified" aria-hidden="true">✓</span>
-          <span class="call-live"><i></i>LIVE</span>
+          <span class="call-live"><i></i>练习中</span>
         </div>
         <div class="call-sub" id="call-sub">伦敦 · 画廊策展人</div>
       </div>
@@ -166,7 +167,7 @@
         <span class="cd-dot" aria-hidden="true"></span>
         <span class="cd-name" id="cd-name">Elena</span>
         <span class="cd-tag">EN · 中文</span>
-        <span class="cd-status" id="cd-status">在线</span>
+        <span class="cd-status" id="cd-status">待你开口</span>
       </div>
       <div class="cd-user" id="cd-user" hidden></div>
       <div class="cd-en" id="cd-en"></div>
@@ -226,7 +227,7 @@
       </div>
       <div class="call-talk-label" id="call-talk-label">按住说话 · 松开发送</div>
       <form class="call-textform" id="call-textform" hidden>
-        <input type="text" id="call-text-input" class="input" placeholder="也可以打字说英文/中文…" maxlength="300" autocomplete="off" spellcheck="false">
+        <input type="text" id="call-text-input" class="input" aria-label="给老师发消息" placeholder="也可以打字说英文/中文…" maxlength="300" autocomplete="off" spellcheck="false">
         <button type="submit" class="send-btn" aria-label="发送">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-send"></use></svg>
         </button>
@@ -287,7 +288,7 @@
 
   <!-- ============ 底部弹层容器 ============ -->
   <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
-  <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true">
+  <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
     <div class="sheet-head">
       <span class="sheet-title" id="sheet-title">提示</span>
       <button type="button" class="icon-btn" id="sheet-close" aria-label="关闭">

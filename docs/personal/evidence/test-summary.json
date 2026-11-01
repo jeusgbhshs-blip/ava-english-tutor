@@ -1,0 +1,43 @@
+{
+  "date_utc": "2026-11-01",
+  "baseline": "5945f18f4f5aeddb480f1e9cf03e3c6916a0ae5a",
+  "branch": "feat/personal-interaction",
+  "node": "v24.22.1",
+  "syntax": {
+    "passed": 71,
+    "failed": 0
+  },
+  "unit": {
+    "passed": 412,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "suites": 44,
+    "previous": 272,
+    "added": 140
+  },
+  "new_test_distribution": {
+    "personal_data": 9,
+    "personal_core": 27,
+    "personal_dialog": 14,
+    "personal_frontend": 38,
+    "personal_kb_focus": 7,
+    "personal_navigation": 8,
+    "personal_voice": 37
+  },
+  "e2e": {
+    "passed": 105,
+    "failed": 0,
+    "skipped": 0,
+    "blocked": 0
+  },
+  "browser": {
+    "engine": "Cloud desktop Chrome",
+    "url": "http://terminal.local:4173/mobile",
+    "real_microphone": false,
+    "real_provider_api": false,
+    "safari": false,
+    "webgl": "static image fallback observed"
+  },
+  "github_published": false
+}

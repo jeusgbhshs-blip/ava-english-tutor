@@ -62,6 +62,8 @@ export const ui = {
   openCall: () => {},
   openSheet: () => {},
   closeSheet: () => {},
+  isSheetCurrent: () => false,
+  updateSheet: () => false,
   openWordbookSheet: () => {},
   refreshCourses: () => {},
 }
@@ -75,13 +77,15 @@ export function toast(message, type = 'info', ms = 2600) {
   const node = document.createElement('div')
   node.className = 'toast ' + type
   node.id = id
+  node.setAttribute('role', type === 'bad' ? 'alert' : 'status')
+  node.setAttribute('aria-atomic', 'true')
   node.innerHTML = `${icon(type === 'ok' ? 'check' : type === 'bad' ? 'close' : 'spark')}<span>${esc(message)}</span>`
   box.appendChild(node)
   while (box.children.length > 3) box.firstElementChild.remove()
   setTimeout(() => {
     node.classList.add('is-out')
     setTimeout(() => node.remove(), 260)
-  }, Math.max(1200, ms))
+  }, Math.max(type === 'bad' ? 5000 : 1200, ms))
 }
 
 /* ---------------------------- 角色 / 场景 ---------------------------- */
@@ -177,6 +181,9 @@ export function sceneIndex(character, sceneId) {
 }
 
 /* ------------------------------ 数据 API ------------------------------ */
+const readGeneration = { plan: 0, settings: 0, content: 0, wordbook: 0, progress: 0, profile: 0 }
+let settingsWriteGeneration = 0
+
 async function safeCall(fn, fallback = null) {
   try {
     const value = await fn()
@@ -211,11 +218,15 @@ export async function loadCharacters() {
 }
 
 export async function loadPlan() {
+  const generation = ++readGeneration.plan
   const res = await safeCall(async () => {
     if (api && typeof api.getPlan === 'function') return api.getPlan()
     return getJSON('/api/plan')
   })
+  // 更新的读取或已确认的计划保存拥有当前状态；迟到响应不能清缓存或改课件。
+  if (generation !== readGeneration.plan) return M.plan
   const apiOk = !!(res && typeof res === 'object' && res.ok !== false)
+  if (!apiOk && M.plan) return M.plan
   let plan = apiOk ? res.plan || null : null
   // 服务端明确返回“没有计划”时，不要再用 localStorage 旧计划兜底（否则会一直显示旧课件/生成中）
   if (apiOk && !plan) {
@@ -241,53 +252,67 @@ export async function loadPlan() {
   if (plan && plan.lessons && typeof plan.lessons === 'object') {
     M.lessons = Object.values(plan.lessons)
   } else {
-    M.lessons = res && Array.isArray(res.lessons) ? res.lessons : []
+    M.lessons = plan && res && Array.isArray(res.lessons) ? res.lessons : []
   }
   return M.plan
 }
 
 export async function loadSettings() {
+  const generation = ++readGeneration.settings
   const res = await safeCall(async () => {
     if (api && typeof api.getSettings === 'function') return api.getSettings()
     return getJSON('/api/settings')
   })
-  M.settings = res && typeof res === 'object' ? res : null
+  if (!res || typeof res !== 'object' || res.ok === false) return null
+  if (generation === readGeneration.settings) M.settings = res
   return M.settings
 }
 
 export async function loadContent() {
+  const generation = ++readGeneration.content
   const res = await safeCall(async () => {
     if (api && typeof api.getContent === 'function') return api.getContent()
     return getJSON('/api/content')
   })
-  M.content = res && typeof res === 'object' ? res : null
+  if (!res || typeof res !== 'object' || res.ok === false) return null
+  if (generation === readGeneration.content) M.content = res
   return M.content
 }
 
 export async function loadWordbook() {
+  const generation = ++readGeneration.wordbook
   const res = await safeCall(async () => {
     if (api && typeof api.getWordbook === 'function') return api.getWordbook(7)
     return getJSON('/api/wordbook?days=7')
   })
-  M.wordbook = res && typeof res === 'object' ? res : null
+  if (!res || typeof res !== 'object' || res.ok === false) return null
+  if (generation === readGeneration.wordbook) M.wordbook = res
   return M.wordbook
 }
 
 export async function loadProgress() {
+  const generation = ++readGeneration.progress
   const res = await safeCall(async () => {
     if (api && typeof api.getProgress === 'function') return api.getProgress()
     return getJSON('/api/progress')
   })
-  M.progress = res && typeof res === 'object' ? res : null
+  if (!res || typeof res !== 'object' || res.ok === false) return null
+  if (generation === readGeneration.progress) M.progress = res
   return M.progress
 }
 
 export async function saveSettings(patch) {
+  const generation = ++settingsWriteGeneration
+  readGeneration.settings++
   const res = await safeCall(async () => {
     if (api && typeof api.saveSettings === 'function') return api.saveSettings(patch)
     return postJSON('/api/settings', patch)
   })
-  if (res && typeof res === 'object') M.settings = { ...(M.settings || {}), ...res }
+  if (generation === settingsWriteGeneration && res && typeof res === 'object' && res.ok !== false) {
+    // Reads started while this write was pending may still contain old settings.
+    readGeneration.settings++
+    M.settings = { ...(M.settings || {}), ...res }
+  }
   return res
 }
 
@@ -439,20 +464,24 @@ export async function saveProfile(patch = {}) {
 
 /** 读取兴趣列表（通用规范化）。 */
 export async function loadProfile() {
+  const generation = ++readGeneration.profile
   const res = await getProfile()
   const profile = res && typeof res === 'object' && res.ok !== false ? res.profile || res : null
-  M.profile = profile && typeof profile === 'object' ? profile : null
+  if (!profile || typeof profile !== 'object') return null
+  if (generation === readGeneration.profile) M.profile = profile
   return M.profile
 }
 
 /* ------------------------------ 本地计划 ------------------------------ */
 export function saveLocalPlan(plan) {
+  readGeneration.plan++
   try {
     localStorage.setItem('ava.mobile.plan', JSON.stringify(plan))
   } catch {
     /* 忽略 */
   }
   M.plan = plan
+  M.lessons = plan && plan.lessons && typeof plan.lessons === 'object' ? Object.values(plan.lessons) : []
 }
 
 export function loadLocalPlan() {
@@ -512,12 +541,19 @@ export function buildLocalPlan(goal = '提升英语日常会话', characterId = 
 
 /* ------------------------------ 单词本弹层 ------------------------------ */
 export async function showWordbookSheet() {
-  ui.openSheet('今日单词表', `<div class="summary-loading"><span class="spinner"></span>正在读取今日单词表…</div>`)
+  const token = ui.openSheet('今日单词表', `<div class="summary-loading"><span class="spinner"></span>正在读取今日单词表…</div>`)
   const book = await loadWordbook()
+  if (!ui.isSheetCurrent(token)) return
+  if (!book) {
+    ui.updateSheet(token, '今日单词表', `<div class="empty-card"><strong>暂时无法读取单词表</strong><p>已有单词会保留。请检查本地服务后重试。</p><button type="button" class="btn btn-primary" id="wordbook-retry">重新加载</button></div>`)
+    $('#wordbook-retry')?.addEventListener('click', () => { if (ui.isSheetCurrent(token)) void showWordbookSheet() })
+    return
+  }
   const days = book && Array.isArray(book.days) ? book.days : []
   const words = days.flatMap((d) => (Array.isArray(d.words) ? d.words : []))
   if (!words.length) {
-    ui.openSheet(
+    ui.updateSheet(
+      token,
       '今日单词表',
       `<div class="empty-card"><span class="empty-orb">${icon('book')}</span><strong>还没有单词</strong><p>通话或聊天后，Ava 会把重点单词和纠错自动整理进今日单词表。</p></div>`,
     )
@@ -534,5 +570,5 @@ export async function showWordbookSheet() {
       </div>`,
     )
     .join('')
-  ui.openSheet('今日单词表', `<div class="muted" style="font-size:11px">共 ${words.length} 个单词</div><div class="summary-kw" style="grid-template-columns:1fr">${list}</div>`)
+  ui.updateSheet(token, '今日单词表', `<div class="muted" style="font-size:12px">共 ${words.length} 个单词</div><div class="summary-kw" style="grid-template-columns:1fr">${list}</div>`)
 }

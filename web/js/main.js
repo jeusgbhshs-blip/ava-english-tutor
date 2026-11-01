@@ -87,6 +87,7 @@ const A = {
     resourceId: 'volc.speech.dialog',
   },
   volcFallback: false,
+  volcGeneration: 0,
   volcSession: false,
   volcConnected: false,
   volcAudio: false,
@@ -1933,6 +1934,7 @@ async function loadDoubaoModule() {
 function doubaoCallbacks() {
   return {
     onReady(info) {
+      if (!A.volcSession) return
       A.volcSession = true
       A.volcConnected = true
       A.volcAudio = false
@@ -1949,6 +1951,7 @@ function doubaoCallbacks() {
       ui.toast(`豆包实时语音已连接${info && info.model ? ' · ' + info.model : ''}`, 'ok', 2400)
     },
     onASR(payload) {
+      if (!A.volcSession) return
       const data = payload && typeof payload === 'object' ? payload : { text: String(payload || ''), final: true }
       const text = String(data.text || '').trim()
       if (!text) return
@@ -1969,6 +1972,7 @@ function doubaoCallbacks() {
       void requestCoachFeedback(text)
     },
     onChat(payload) {
+      if (!A.volcSession) return
       const data = payload && typeof payload === 'object' ? payload : { text: String(payload || ''), final: false }
       const text = String(data.text || '')
       if (text) {
@@ -2029,6 +2033,7 @@ function doubaoCallbacks() {
       }
     },
     onError(err) {
+      if (!A.volcSession) return
       handleVolcError(err)
     },
     onEnded(info) {
@@ -2092,25 +2097,8 @@ async function beginVolcCall() {
     }
   }
   clearSpeech()
+  const generation = ++A.volcGeneration
   A.volcFallback = false
-  updateEnginePill()
-  const factory = await loadDoubaoModule()
-  if (!factory) {
-    ui.toast('豆包语音模块未就绪，已使用浏览器语音', 'bad', 4200)
-    fallbackToBrowserVoice()
-    return false
-  }
-  const instance = ensureDoubaoInstance(factory)
-  if (!instance) {
-    ui.toast('豆包语音初始化失败，已使用浏览器语音', 'bad', 4200)
-    fallbackToBrowserVoice()
-    return false
-  }
-  if (instance.isSupported === false) {
-    ui.toast('当前浏览器不支持豆包实时语音（需要麦克风与 AudioWorklet），已使用浏览器语音', 'bad', 4800)
-    fallbackToBrowserVoice()
-    return false
-  }
   A.volcSession = true
   A.volcConnected = false
   A.volcAudio = false
@@ -2118,11 +2106,27 @@ async function beginVolcCall() {
   A.turnFinished = false
   setPhase('thinking')
   if (D.statusText) D.statusText.textContent = '正在连接豆包语音…'
-  if (D.micHint) D.micHint.textContent = '正在连接豆包语音…'
+  if (D.micHint) D.micHint.textContent = '正在连接豆包语音…再次点击可取消'
   A.captionMode = 'placeholder'
   A.placeholder = '正在连接豆包实时语音…'
   renderCaption()
   safeAvatar('setState', 'thinking')
+  updateEnginePill()
+  const factory = await loadDoubaoModule()
+  if (generation !== A.volcGeneration || !A.volcSession) return false
+  if (!factory) {
+    handleVolcError({ message: '豆包语音模块未就绪' })
+    return false
+  }
+  const instance = ensureDoubaoInstance(factory)
+  if (!instance) {
+    handleVolcError({ message: '豆包语音初始化失败' })
+    return false
+  }
+  if (instance.isSupported === false) {
+    handleVolcError({ message: '当前浏览器不支持豆包实时语音（需要安全环境、麦克风与 Web Audio）' })
+    return false
+  }
   try {
     const started = instance.start({
       mode: modes.getMode(),
@@ -2130,12 +2134,14 @@ async function beginVolcCall() {
       teacherName: teacherName(),
     })
     const okStart = started && typeof started.then === 'function' ? await started : started !== false
+    if (generation !== A.volcGeneration || !A.volcSession) return false
     if (!okStart && !A.volcFallback) {
       handleVolcError({ message: '豆包语音启动失败' })
       return false
     }
     return true
   } catch (err) {
+    if (generation !== A.volcGeneration || !A.volcSession) return false
     handleVolcError(err)
     return false
   }
@@ -2143,6 +2149,7 @@ async function beginVolcCall() {
 
 /** 停止豆包会话（结束/切换模式/卸载）。 */
 function stopVolcCall() {
+  A.volcGeneration += 1
   A.volcSession = false
   A.volcConnected = false
   A.volcAudio = false
@@ -2182,6 +2189,7 @@ function interruptVolc() {
 
 /** 豆包语音出错：中文 toast + 本会话回退浏览器语音。 */
 function handleVolcError(err) {
+  const generation = ++A.volcGeneration
   const message =
     err && typeof err === 'object'
       ? String(err.message || err.error || '豆包语音连接失败')
@@ -2203,7 +2211,7 @@ function handleVolcError(err) {
   ui.toast(`${message}；本会话已回退浏览器语音`, 'bad', 5600)
   // 回退后自动用浏览器语音继续这次交互
   setTimeout(() => {
-    if (A.phase === 'idle' && shouldUseBrowserFallbackVoice()) startListening()
+    if (generation === A.volcGeneration && A.phase === 'idle' && shouldUseBrowserFallbackVoice()) startListening()
   }, 400)
 }
 
@@ -2882,9 +2890,11 @@ function bindEvents() {
   // 空格快捷键：不在输入框/弹窗内时切换麦克风
   document.addEventListener('keydown', (event) => {
     if (event.code !== 'Space') return
+    if (event.defaultPrevented || event.repeat || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
     const target = event.target
     if (target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
     if (target instanceof HTMLElement && target.isContentEditable) return
+    if (target instanceof HTMLElement && target.closest('button, a[href], summary, [role="button"], [role="link"], [role="tab"]')) return
     const modalOpen = $$('.modal-layer').some((el) => !el.hidden) || !D.onboarding.hidden
     if (modalOpen) return
     event.preventDefault()

@@ -10,8 +10,15 @@ import {
 } from './core.js'
 import { libraryBlockHtml, refreshLibraryCard, openLibrarySheet, startTodayLesson, completeToday } from './library.js'
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024
-const ACCEPT = '.txt,.md,.markdown,.csv,.doc,.docx,.rtf,.pptx,.ppt,.pdf,.png,.jpg,.jpeg,.webp'
+const MAX_FILE_SIZE = 12 * 1024 * 1024
+// 与 lib/docExtract.js 的上传合同一致；拖拽与文件选择使用同一份扩展名列表。
+const FILE_EXTENSIONS = [
+  '.txt', '.md', '.markdown', '.text', '.csv', '.json', '.log',
+  '.doc', '.docx', '.rtf', '.odt', '.html', '.htm',
+  '.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.heic', '.heif', '.tif', '.tiff',
+  '.pptx', '.pptm', '.pdf',
+]
+const ACCEPT = FILE_EXTENSIONS.join(',')
 const POLL_MS = 3000
 const POLL_MAX = 40
 
@@ -28,13 +35,20 @@ const KB = {
   pollCount: 0,
   lastLoadedAt: 0,
 }
+let importGeneration = 0
+let importSheet = null
+let uploadStatusTimer = null
+let kbFocusOrigin = null
+let kbBackgroundState = null
 
 const docTitle = (doc) => String((doc && (doc.title || doc.name)) || '未命名材料')
 const docStatus = (doc) => {
-  const raw = String((doc && (doc.status || doc.enrichStatus || doc.state)) || '').toLowerCase()
-  if (raw === 'enriching' || raw === 'processing' || raw === 'pending' || (doc && doc.enriching === true)) return 'enriching'
-  if (raw === 'error' || raw === 'failed') return 'error'
-  return 'done'
+  const raw = String((doc && (doc.enrichStatus || doc.status || doc.state)) || '').toLowerCase()
+  if (raw === 'enriching' || raw === 'processing' || raw === 'pending' || (doc && doc.enriching === true)) return 'pending'
+  if (raw === 'error' || raw === 'failed') return 'failed'
+  if (raw === 'partial') return 'partial'
+  if (raw === 'done') return 'done'
+  return 'stored'
 }
 const docSource = (doc) => {
   const raw = String((doc && (doc.source || doc.origin || doc.kind)) || '').toLowerCase()
@@ -64,7 +78,10 @@ const docLang = (doc) => {
   return hasCjk && hasEn ? '中英' : hasCjk ? '中文' : hasEn ? '英文' : '—'
 }
 
-const statusText = (status) => (status === 'enriching' ? '摘要生成中' : status === 'error' ? '处理失败' : '已处理')
+const statusText = (status) => ({
+  pending: '摘要生成中', done: '摘要已完成', partial: '部分摘要完成',
+  failed: '摘要失败，原文可用', stored: '原文已入库，未生成摘要',
+}[status] || '原文已入库')
 
 export function isKbOpen() {
   return KB.open
@@ -101,7 +118,7 @@ function panelHtml() {
             <span class="kb-drop-orb">${icon('book')}</span>
             <div class="kb-drop-copy">
               <strong>拖拽文件到这里</strong>
-              <p>或点击选择文件，单文件 ≤ 20MB</p>
+              <p>或点击选择文件，单文件 ≤ 12MB</p>
             </div>
             <button type="button" class="kb-btn kb-btn-primary" id="kb-file-btn">${icon('spark')}选择文件</button>
             <div class="kb-upload-status" id="kb-upload-status" hidden></div>
@@ -114,7 +131,7 @@ function panelHtml() {
             <input type="url" id="kb-url-input" class="kb-input" placeholder="https://example.com/article" maxlength="500" aria-label="网页链接">
             <button type="submit" class="kb-btn kb-btn-primary" id="kb-url-btn">导入</button>
           </form>
-          <p class="kb-hint">抓取网页正文并存入本机知识库，不上传第三方。</p>
+          <p class="kb-hint">网页正文存入本机；启用 AI 摘要或讲解时，相关内容会发送到配置的服务商。</p>
         </section>
 
         <section class="kb-block">
@@ -126,7 +143,7 @@ function panelHtml() {
         <section class="kb-tips">
           <div class="kb-tips-title">使用提示</div>
           <ul class="kb-tips-list">
-            <li>材料只保存在本机，不上传第三方。</li>
+            <li>材料保存在本机；云 AI 会处理讲解所需的相关内容。</li>
             <li>图片资料需要校对确认，避免 OCR 错字进入讲解。</li>
             <li>勾选 1–N 篇材料后，围绕它们和 Ava 讨论。</li>
             <li>发散讨论可以不带材料；自由聊则直接开始。</li>
@@ -220,7 +237,7 @@ function renderList() {
         <div class="kb-item-main" data-act="toggle-preview" data-id="${esc(id)}">
           <div class="kb-item-top">
             <div class="kb-item-title">${esc(docTitle(doc))}</div>
-            <span class="kb-status is-${status}">${statusText(status)}</span>
+            <span class="kb-status is-${status === 'pending' ? 'enriching' : status === 'failed' ? 'error' : status}">${statusText(status)}</span>
           </div>
           <div class="kb-meta">
             <span>${esc(docSource(doc))}</span><i>·</i>
@@ -258,13 +275,15 @@ function renderSelection() {
 
 function setBusy(busy) {
   KB.busy = busy
-  ;['kb-file-btn', 'kb-url-btn', 'kb-grounded', 'kb-divergent', 'kb-free', 'kb-refresh'].forEach((id) => {
+  ;['kb-file-btn', 'kb-url-btn', 'kb-paste-open', 'kb-grounded', 'kb-divergent', 'kb-free', 'kb-refresh'].forEach((id) => {
     const el = document.getElementById(id)
     if (el) el.disabled = busy
   })
 }
 
 function setUploadStatus(text, type = 'info') {
+  if (uploadStatusTimer) clearTimeout(uploadStatusTimer)
+  uploadStatusTimer = null
   const el = $('#kb-upload-status')
   if (!el) return
   if (!text) {
@@ -275,6 +294,11 @@ function setUploadStatus(text, type = 'info') {
   el.hidden = false
   el.className = 'kb-upload-status is-' + type
   el.innerHTML = type === 'busy' ? '<span class="spinner"></span>' + esc(text) : esc(text)
+}
+
+function clearUploadStatusLater(ms = 4000) {
+  if (uploadStatusTimer) clearTimeout(uploadStatusTimer)
+  uploadStatusTimer = setTimeout(() => setUploadStatus(''), ms)
 }
 
 /* ------------------------------ 数据 ------------------------------ */
@@ -323,7 +347,7 @@ function schedulePoll() {
     clearTimeout(KB.pollTimer)
     KB.pollTimer = null
   }
-  const hasEnriching = KB.docs.some((doc) => docStatus(doc) === 'enriching')
+  const hasEnriching = KB.docs.some((doc) => docStatus(doc) === 'pending')
   if (!KB.open || !hasEnriching || KB.pollCount >= POLL_MAX) return
   KB.pollCount += 1
   KB.pollTimer = setTimeout(() => {
@@ -377,31 +401,74 @@ function readFileDataUrl(file) {
   })
 }
 
-/** 图片：先 OCR 预览，用户校对确认后才写入知识库。 */
-async function reviewImageFile(file) {
-  setBusy(true)
-  setUploadStatus(`正在识别「${file.name}」…`, 'busy')
-  try {
-    const [dataBase64, dataUrl] = await Promise.all([readFileBase64(file), readFileDataUrl(file)])
-    const res = await postJSON(
-      '/api/kb/preview-file',
-      { name: file.name, dataBase64, mime: file.type || 'application/octet-stream' },
-      { timeoutMs: 120000 },
-    )
-    if (!res || res.ok === false) throw new Error((res && res.error) || '图片文字识别失败')
-    setUploadStatus(`「${file.name}」识别完成，请校对后入库`, 'ok')
-    openProofreadSheet(file, dataUrl, res)
-  } catch (err) {
-    const message = (err && err.message) || '图片文字识别失败，请换一张更清晰的截图'
-    toast(message, 'bad', 3800)
-    setUploadStatus(message, 'error')
-  } finally {
-    setBusy(false)
-    setTimeout(() => setUploadStatus(''), 4200)
+/** 一张图片占有一个弹层；关闭/替换会结束等待，但迟到请求不能操作其他弹层。 */
+function createImageSheet() {
+  let settled = false
+  let resolve
+  const result = new Promise((done) => { resolve = done })
+  const settle = (value) => {
+    if (settled) return
+    settled = true
+    resolve(value)
+  }
+  const token = ui.openSheet('图片资料校对', '', { onClose: () => settle('cancelled') })
+  return {
+    token, result,
+    isCurrent: () => !settled && ui.isSheetCurrent(token),
+    finish(value) {
+      if (settled) return
+      settle(value)
+      ui.closeSheet(token)
+    },
   }
 }
 
-function openProofreadSheet(file, dataUrl, result) {
+/** 图片队列只在保存或明确跳过后继续；关闭、返回或替换弹层取消剩余队列。 */
+async function reviewImageFile(file, generation = importGeneration) {
+  const sheet = createImageSheet()
+  importSheet = sheet
+  const current = () => generation === importGeneration && sheet.isCurrent()
+  const recognize = async () => {
+    if (!current()) return
+    ui.updateSheet(sheet.token, '图片资料校对', `<div class="summary-loading"><span class="spinner"></span>正在识别「${esc(file.name)}」…</div><button type="button" class="btn btn-ghost btn-sm" id="ocr-cancel">取消导入</button>`)
+    const cancel = document.getElementById('ocr-cancel')
+    if (cancel) cancel.onclick = () => sheet.finish('cancelled')
+    setUploadStatus(`正在识别「${file.name}」…`, 'busy')
+    try {
+      const [dataBase64, dataUrl] = await Promise.all([readFileBase64(file), readFileDataUrl(file)])
+      if (!current()) return
+      const res = await postJSON(
+        '/api/kb/preview-file',
+        { name: file.name, dataBase64, mime: file.type || 'application/octet-stream' },
+        { timeoutMs: 120000 },
+      )
+      if (!current()) return
+      if (!res || res.ok === false) throw new Error((res && res.error) || '图片文字识别失败')
+      setUploadStatus(`「${file.name}」识别完成，请校对后入库`, 'ok')
+      openProofreadSheet(file, dataUrl, res, sheet)
+    } catch (err) {
+      if (!current()) return
+      const message = (err && err.message) || '图片文字识别失败，请换一张更清晰的截图'
+      setUploadStatus(message, 'error')
+      ui.updateSheet(sheet.token, '图片识别失败', `<div class="kb-confirm"><p>${esc(message)}</p><div class="ocr-actions"><button type="button" class="btn btn-ghost btn-sm" id="ocr-cancel">取消导入</button><button type="button" class="btn btn-ghost btn-sm" id="ocr-skip">跳过这张</button><button type="button" class="btn btn-primary btn-sm" id="ocr-retry">重试识别</button></div></div>`)
+      const cancel = document.getElementById('ocr-cancel')
+      const skip = document.getElementById('ocr-skip')
+      const retry = document.getElementById('ocr-retry')
+      if (cancel) cancel.onclick = () => sheet.finish('cancelled')
+      if (skip) skip.onclick = () => sheet.finish('skipped')
+      if (retry) retry.onclick = () => void recognize()
+    }
+  }
+  void recognize()
+  try {
+    return await sheet.result
+  } finally {
+    if (importSheet === sheet) importSheet = null
+  }
+}
+
+function openProofreadSheet(file, dataUrl, result, sheet) {
+  if (!sheet.isCurrent()) return
   const warnings = Array.isArray(result.warnings) ? result.warnings : []
   const text = String(result.text || '')
   const body = `
@@ -415,18 +482,22 @@ function openProofreadSheet(file, dataUrl, result) {
         <textarea class="ocr-textarea" id="ocr-review-text" spellcheck="false" aria-label="校对提取文本">${esc(text)}</textarea>
         <p class="ocr-hint">${warnings.length ? esc(warnings.join(' ')) : 'OCR 结果可能有少量错字，确认后再加入知识库。'}</p>
         <div class="ocr-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="ocr-cancel">取消</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="ocr-cancel">取消导入</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="ocr-skip">跳过这张</button>
           <button type="button" class="btn btn-primary btn-sm" id="ocr-confirm">确认入库</button>
         </div>
       </div>
     </div>`
-  ui.openSheet('图片资料校对', body)
+  ui.updateSheet(sheet.token, '图片资料校对', body)
   const textarea = document.getElementById('ocr-review-text')
   const confirm = document.getElementById('ocr-confirm')
   const cancel = document.getElementById('ocr-cancel')
-  if (cancel) cancel.onclick = () => ui.closeSheet()
+  const skip = document.getElementById('ocr-skip')
+  if (cancel) cancel.onclick = () => sheet.finish('cancelled')
+  if (skip) skip.onclick = () => sheet.finish('skipped')
   if (confirm) {
     confirm.onclick = async () => {
+      if (!sheet.isCurrent() || confirm.disabled) return
       const edited = String((textarea && textarea.value) || '').trim()
       if (edited.length < 20) {
         toast('校对后的内容太短，至少保留 20 个字符', 'bad', 3000)
@@ -434,19 +505,23 @@ function openProofreadSheet(file, dataUrl, result) {
       }
       confirm.disabled = true
       confirm.textContent = '正在入库…'
+      if (skip) skip.disabled = true
       try {
         const res = await postJSON(
           '/api/kb/save-text',
           { name: file.name, text: edited, kind: result.kind || 'image' },
           { timeoutMs: 60000 },
         )
+        if (!sheet.isCurrent()) return
         if (!res || res.ok === false) throw new Error((res && res.error) || '入库失败')
-        ui.closeSheet()
-        toast('校对内容已加入知识库', 'ok', 2600)
+        sheet.finish('saved')
+        toast(res.message || '校对内容已加入知识库', 'ok', 2600)
         void reloadDocs()
       } catch (err) {
+        if (!sheet.isCurrent()) return
         confirm.disabled = false
         confirm.textContent = '确认入库'
+        if (skip) skip.disabled = false
         toast((err && err.message) || '入库失败，请重试', 'bad', 3600)
       }
     }
@@ -455,35 +530,55 @@ function openProofreadSheet(file, dataUrl, result) {
 
 async function uploadFiles(files) {
   const list = Array.from(files || [])
-  if (!list.length) return
-  for (const file of list) {
-    if (!file || !file.name) continue
-    if (file.size > MAX_FILE_SIZE) {
-      toast(`「${file.name}」超过 20MB，无法上传`, 'bad', 3200)
-      continue
+  if (!list.length) return false
+  if (KB.busy) {
+    toast('正在处理材料，请完成当前导入或取消后再试', 'info', 2600)
+    return false
+  }
+  const generation = ++importGeneration
+  setBusy(true)
+  try {
+    for (const file of list) {
+      if (generation !== importGeneration) return false
+      if (!file || !file.name) continue
+      if (file.size > MAX_FILE_SIZE) {
+        toast(`「${file.name}」超过 12MB，无法上传`, 'bad', 3200)
+        continue
+      }
+      const ext = String(file.name).toLowerCase().match(/\.[^.]+$/)
+      if (!ext || !FILE_EXTENSIONS.includes(ext[0])) {
+        toast(`暂不支持「${file.name}」的文件格式，请转换后再上传`, 'bad', 3200)
+        continue
+      }
+      if (isImageFileName(file.name)) {
+        const result = await reviewImageFile(file, generation)
+        if (result === 'cancelled') return false
+        continue
+      }
+      setUploadStatus(`正在上传「${file.name}」…`, 'busy')
+      try {
+        const dataBase64 = await fileToBase64(file)
+        if (generation !== importGeneration) return false
+        const res = await kbUpload({ name: file.name, dataBase64, mime: file.type || 'application/octet-stream' })
+        if (generation !== importGeneration) return false
+        if (!res || res.ok === false) throw new Error((res && res.error) || '上传失败')
+        toast(`「${file.name}」已加入知识库`, 'ok', 2600)
+        setUploadStatus(res.message || `「${file.name}」已入库，可按原文学习`, 'ok')
+      } catch (err) {
+        if (generation !== importGeneration) return false
+        const message = (err && err.message) || '上传失败，请稍后重试'
+        toast(message, 'bad', 3600)
+        setUploadStatus(message, 'error')
+      }
     }
-    if (isImageFileName(file.name)) {
-      await reviewImageFile(file)
-      continue
-    }
-    setBusy(true)
-    setUploadStatus(`正在上传「${file.name}」…`, 'busy')
-    try {
-      const dataBase64 = await fileToBase64(file)
-      const res = await kbUpload({ name: file.name, dataBase64, mime: file.type || 'application/octet-stream' })
-      if (!res || res.ok === false) throw new Error((res && res.error) || '上传失败')
-      toast(`「${file.name}」已加入知识库`, 'ok', 2600)
-      setUploadStatus(`「${file.name}」导入成功，摘要生成中…`, 'ok')
-    } catch (err) {
-      const message = (err && err.message) || '上传失败，请稍后重试'
-      toast(message, 'bad', 3600)
-      setUploadStatus(message, 'error')
-    } finally {
+    return true
+  } finally {
+    if (generation === importGeneration) {
       setBusy(false)
+      if (KB.open) void reloadDocs()
+      clearUploadStatusLater()
     }
   }
-  void reloadDocs()
-  setTimeout(() => setUploadStatus(''), 4000)
 }
 
 async function importUrl(url) {
@@ -492,23 +587,32 @@ async function importUrl(url) {
     toast('请输入以 http(s):// 开头的网页链接', 'bad', 2800)
     return
   }
+  if (KB.busy) {
+    toast('正在处理材料，请完成当前导入或取消后再试', 'info', 2600)
+    return
+  }
+  const generation = ++importGeneration
   setBusy(true)
   setUploadStatus('正在抓取网页正文…', 'busy')
   try {
     const res = await kbImportUrl(value)
+    if (generation !== importGeneration) return
     if (!res || res.ok === false) throw new Error((res && res.error) || '网页导入失败')
     toast('网页已导入知识库', 'ok', 2600)
-    setUploadStatus('网页导入成功，摘要生成中…', 'ok')
+    setUploadStatus(res.message || '网页已入库，可按原文学习', 'ok')
     const input = $('#kb-url-input')
-    if (input) input.value = ''
+    if (input && input.value.trim() === value) input.value = ''
   } catch (err) {
+    if (generation !== importGeneration) return
     const message = (err && err.message) || '网页导入失败，请检查链接或稍后重试'
     toast(message, 'bad', 3600)
     setUploadStatus(message, 'error')
   } finally {
-    setBusy(false)
-    void reloadDocs()
-    setTimeout(() => setUploadStatus(''), 4000)
+    if (generation === importGeneration) {
+      setBusy(false)
+      if (KB.open) void reloadDocs()
+      clearUploadStatusLater()
+    }
   }
 }
 
@@ -533,7 +637,7 @@ function openPasteSheet() {
         <button type="button" class="btn btn-primary btn-sm" id="kb-paste-save">保存到知识库</button>
       </div>
     </div>`
-  ui.openSheet('粘贴文本', body)
+  const sheetToken = ui.openSheet('粘贴文本', body)
   const title = document.getElementById('kb-paste-title')
   const text = document.getElementById('kb-paste-text')
   const count = document.getElementById('kb-paste-count')
@@ -542,25 +646,28 @@ function openPasteSheet() {
   const refreshCount = () => { if (count) count.textContent = `${String(text.value || '').length} 字` }
   if (text) {
     text.addEventListener('input', refreshCount)
-    setTimeout(() => text.focus(), 80)
+    setTimeout(() => { if (ui.isSheetCurrent(sheetToken)) text.focus() }, 80)
   }
   refreshCount()
   if (clip) {
     clip.onclick = async () => {
       try {
         const value = await navigator.clipboard.readText()
+        if (!ui.isSheetCurrent(sheetToken)) return
         if (!value) throw new Error('clipboard-empty')
         if (!text.value.trim()) text.value = value
         else text.value += `\n${value}`
         refreshCount()
         toast('已粘贴剪贴板内容', 'ok', 1600)
       } catch {
+        if (!ui.isSheetCurrent(sheetToken)) return
         toast('无法读取剪贴板，请在文本框里手动粘贴（⌘V / Ctrl+V）', 'info', 3200)
       }
     }
   }
   if (save) {
     save.onclick = async () => {
+      if (!ui.isSheetCurrent(sheetToken) || save.disabled) return
       const content = String(text.value || '').trim()
       if (content.length < 20) { toast('正文太短，至少粘贴 20 个字符', 'info', 2600); return }
       save.disabled = true
@@ -573,13 +680,15 @@ function openPasteSheet() {
           kind: 'txt',
           source: 'paste',
         }, { timeoutMs: 60000 })
+        if (!ui.isSheetCurrent(sheetToken)) return
         if (!res || res.ok === false) throw new Error((res && res.error) || '保存失败')
         const id = res.doc && res.doc.id
-        ui.closeSheet()
-        toast('已加入知识库，可直接勾选学习', 'ok', 3000)
+        ui.closeSheet(sheetToken)
+        toast(res.message || '已加入知识库，可直接勾选学习', 'ok', 3000)
         if (id) KB.selected.add(id)
         void reloadDocs()
       } catch (err) {
+        if (!ui.isSheetCurrent(sheetToken)) return
         save.disabled = false
         save.textContent = '保存到知识库'
         toast((err && err.message) || '保存失败，请重试', 'bad', 3400)
@@ -628,7 +737,7 @@ function confirmDelete(doc) {
   const id = String((doc && (doc.id || doc.docId)) || '')
   if (!id) return
   const title = docTitle(doc)
-  ui.openSheet(
+  const sheetToken = ui.openSheet(
     '删除材料',
     `<div class="kb-confirm">
       <p>确定删除「${esc(title)}」吗？删除后知识库讨论将不再引用它。</p>
@@ -641,24 +750,27 @@ function confirmDelete(doc) {
   const body = $('#sheet-body')
   if (!body) return
   body.onclick = async (event) => {
+    if (!ui.isSheetCurrent(sheetToken)) return
     const target = event.target instanceof Element ? event.target.closest('[data-act]') : null
     if (!target) return
     const act = target.getAttribute('data-act')
-    if (act === 'kb-cancel') ui.closeSheet()
+    if (act === 'kb-cancel') ui.closeSheet(sheetToken)
     else if (act === 'kb-delete-confirm') {
       target.disabled = true
       try {
         const res = await kbDelete(id)
+        if (!ui.isSheetCurrent(sheetToken)) return
         if (!res || res.ok === false) throw new Error((res && res.error) || '删除失败')
         KB.selected.delete(id)
         KB.previews.delete(id)
         KB.docs = KB.docs.filter((item) => String(item.id || item.docId) !== id)
-        ui.closeSheet()
+        ui.closeSheet(sheetToken)
         toast('材料已删除', 'ok', 2200)
         renderList()
         renderSelection()
         void reloadDocs({ silent: true })
       } catch (err) {
+        if (!ui.isSheetCurrent(sheetToken)) return
         target.disabled = false
         toast((err && err.message) || '删除失败，请重试', 'bad', 3200)
       }
@@ -679,7 +791,7 @@ function startDiscussion(kbMode) {
   }
   const character = characterById(M.activeCharId)
   const opts = { kbMode }
-  if (docs.length) {
+  if (kbMode !== 'free' && docs.length) {
     opts.kbDocIds = docs.map((doc) => String(doc.id || doc.docId))
     opts.kbDocs = docs.map((doc) => docTitle(doc))
   }
@@ -688,30 +800,77 @@ function startDiscussion(kbMode) {
 }
 
 /* ------------------------------ 打开 / 关闭 ------------------------------ */
+function usableKbFocus(element) {
+  return !!(element && element.isConnected && !element.disabled &&
+    !element.closest('[hidden], [inert], [aria-hidden="true"]') && element.getClientRects().length)
+}
+
+function containKbFocus(event) {
+  if (event.key !== 'Tab' || event.defaultPrevented || !KB.open || document.body.classList.contains('sheet-open')) return
+  const host = $('#kb-screen')
+  if (!host || host.hidden || host.inert) return
+  const controls = [...host.querySelectorAll('button, a[href], input, textarea, select, [tabindex], [contenteditable="true"]')]
+    .filter((element) => element.tabIndex >= 0 && usableKbFocus(element))
+  const first = controls[0] || host
+  const last = controls[controls.length - 1] || host
+  const active = document.activeElement
+  if (!controls.length || !host.contains(active) || active === host || (event.shiftKey ? active === first : active === last)) {
+    event.preventDefault()
+    ;(event.shiftKey ? last : first).focus({ preventScroll: true })
+  }
+}
+
 export function openKbPanel() {
   const host = $('#kb-screen')
-  if (!host) return
+  if (!host || KB.open) return
+  kbFocusOrigin = document.activeElement
+  kbBackgroundState = ['#screens', '#tabbar'].map((selector) => $(selector)).filter(Boolean)
+    .map((element) => ({ element, inert: element.inert }))
+  for (const { element } of kbBackgroundState) element.inert = true
   KB.open = true
   document.body.classList.add('kb-open')
   host.hidden = false
   host.classList.add('is-active')
+  host.setAttribute('role', 'dialog')
+  host.setAttribute('aria-modal', 'true')
+  host.tabIndex = -1
   renderKbPanel()
+  if (!document.body.classList.contains('sheet-open')) {
+    const target = $('#kb-close', host) || host
+    if (usableKbFocus(target)) target.focus({ preventScroll: true })
+  }
   if (Date.now() - KB.lastLoadedAt > 1500) void reloadDocs()
 }
 
 export function closeKbPanel() {
+  if (!KB.open) return
   const host = $('#kb-screen')
   KB.open = false
+  importGeneration += 1
+  if (importSheet) importSheet.finish('cancelled')
+  importSheet = null
+  setBusy(false)
+  setUploadStatus('')
   document.body.classList.remove('kb-open')
   stopPoll()
   if (host) {
     host.hidden = true
     host.classList.remove('is-active')
+    host.removeAttribute('aria-modal')
   }
+  for (const { element, inert } of kbBackgroundState || []) element.inert = inert
+  kbBackgroundState = null
+  const origin = kbFocusOrigin
+  kbFocusOrigin = null
+  // An active sheet retains its own focus and restores KB's inert value itself.
+  if (document.body.classList.contains?.('sheet-open')) return
+  const target = usableKbFocus(origin) ? origin : $('#tabbar [aria-selected="true"]')
+  if (usableKbFocus(target)) target.focus({ preventScroll: true })
 }
 
 /* ------------------------------ 事件绑定 ------------------------------ */
 function bindPanel(host) {
+  host.addEventListener('keydown', containKbFocus)
   host.addEventListener('click', (event) => {
     const target = event.target instanceof Element ? event.target.closest('[data-act], [data-id]') : null
     if (!target || !host.contains(target)) return
