@@ -1,0 +1,360 @@
+/* ==========================================================================
+   v4.0 · 通话页方案 C（桌面优先）：沉浸式台词框 + 单一底部控制坞
+   - 全屏人物；只保留一条玻璃台词框（当前英文 + 中文 + 你刚说的）
+   - 历史记录收进右侧按钮；不再有重复气泡/对话条/麦克风诊断卡（异常时才出现）
+   ========================================================================== */
+
+/* 隐藏旧的重复层 */
+.call-scene-row { display: none !important; }
+.call-bubbles { display: none !important; }
+.mic-dock { display: none !important; }
+
+/* ---------- 唯一台词框 ---------- */
+#call-dialogue {
+  display: block !important;
+  position: absolute;
+  left: 50%; bottom: 152px;
+  transform: translateX(-50%);
+  width: min(900px, 70vw);
+  z-index: 12;
+  padding: 16px 20px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, .17);
+  border-left: 3px solid var(--theme);
+  background:
+    linear-gradient(158deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02) 40%, rgba(255, 255, 255, 0) 100%),
+    rgba(13, 18, 30, .56);
+  backdrop-filter: blur(26px) saturate(155%);
+  -webkit-backdrop-filter: blur(26px) saturate(155%);
+  box-shadow: 0 28px 70px -34px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .16);
+  animation: none;
+}
+#call-dialogue[hidden] { display: none !important; }
+#call-dialogue .cd-head { margin-bottom: 7px; }
+#call-dialogue .cd-en {
+  font-size: 18px; line-height: 1.55; letter-spacing: .002em;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+#call-dialogue .cd-zh { margin-top: 5px; font-size: 12.5px; line-height: 1.55; -webkit-line-clamp: 2; }
+.cd-user {
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 2px 0 9px;
+  font-size: 12px; line-height: 1.45; color: rgba(214, 226, 250, .62);
+}
+.cd-user[hidden] { display: none !important; }
+.cd-user b { flex: none; color: rgba(111, 242, 221, .9); font-weight: 750; }
+.cd-user span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 底部控制坞 ---------- */
+.call-bottom { position: static; background: none; padding: 0; }
+.call-control-dock {
+  position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+  z-index: 15;
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .17);
+  background: linear-gradient(158deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .03) 45%, rgba(255, 255, 255, .01)), rgba(12, 17, 30, .54);
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: 0 22px 54px -28px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .16);
+}
+.call-control-dock .call-icon-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: rgba(255, 255, 255, .05);
+  color: rgba(231, 239, 255, .85);
+}
+.call-control-dock .call-icon-btn:hover { background: rgba(255, 255, 255, .11); color: #fff; }
+.call-control-dock .call-icon-btn.is-off { color: rgba(255, 255, 255, .4); }
+.call-control-dock .call-hangup {
+  color: #fff; background: linear-gradient(145deg, #ff7188, #e11d48); border-color: transparent;
+  box-shadow: 0 12px 28px -12px rgba(255, 113, 136, .85);
+}
+.call-control-dock .call-talk { width: 74px; height: 74px; flex: none; }
+.call-control-dock .call-talk .icon { width: 27px; height: 27px; }
+.call-control-dock .call-action-btn { display: none; }
+
+.call-talk-label {
+  position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%);
+  z-index: 15; font-size: 10.5px; letter-spacing: .02em; color: rgba(214, 226, 250, .48);
+  white-space: nowrap;
+}
+
+/* ---------- 右侧对话记录 ---------- */
+.call-side-actions {
+  position: absolute; right: 28px; top: 50%; transform: translateY(-50%);
+  z-index: 18; display: flex; flex-direction: column; gap: 10px;
+}
+.call-glass-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 42px; padding: 0 14px 0 11px;
+  border-radius: 14px; border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(12, 17, 30, .48);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  color: rgba(231, 239, 255, .82); font-size: 11.5px; font-weight: 650;
+  box-shadow: 0 14px 32px -22px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .12);
+  transition: .18s ease;
+}
+.call-glass-btn .icon { width: 16px; height: 16px; }
+.call-glass-btn:hover, .call-glass-btn.is-on { background: rgba(255, 255, 255, .12); color: #fff; }
+
+.call.history-open .call-bubbles {
+  display: flex !important;
+  position: absolute; left: auto; right: 28px; top: 92px; bottom: 140px;
+  width: min(640px, 54vw); max-height: none; z-index: 20;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(12, 17, 30, .58);
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: 0 26px 60px -32px rgba(0, 0, 0, .95);
+  overflow-y: auto;
+}
+.call.history-open .call-bubbles::before {
+  content: "对话记录";
+  position: sticky; top: 0; z-index: 1;
+  font-size: 10px; font-weight: 750; letter-spacing: .16em; text-transform: uppercase;
+  color: rgba(111, 242, 221, .8); padding-bottom: 6px;
+}
+.call.history-open #call-dialogue { display: none !important; }
+.call.history-open .call-bubbles .bubble { max-width: 88%; }
+.call.history-open .call-bubbles .bubble-body { background: rgba(8, 12, 20, .72); font-size: 13.5px; padding: 11px 14px; }
+.call.history-open .call-bubbles .bubble-en { font-size: 13.5px; }
+.call.history-open .call-bubbles .bubble-zh { font-size: 11.5px; }
+body.call-history-open .toasts { left: 28px; right: auto; align-items: flex-start; }
+body.call-history-open .mic-dock { display: none !important; }
+
+/* ---------- 文字输入 / 录音 / 提示 / 异常卡片 ---------- */
+.call-textform {
+  position: absolute; left: 50%; bottom: 148px; transform: translateX(-50%);
+  width: min(760px, 62vw); z-index: 16;
+}
+.call-textform[hidden] { display: none !important; }
+.call-ptt {
+  position: absolute; left: 50%; bottom: 148px; transform: translateX(-50%);
+  width: min(760px, 62vw); z-index: 17;
+}
+.call.is-recording #call-dialogue { display: none !important; }
+.call.is-recording .call-side-actions { display: none !important; }
+.mic-dock:has(.mic-extra:not([hidden])) {
+  display: flex !important;
+  position: absolute; left: 50%; bottom: 132px; transform: translateX(-50%);
+  width: min(760px, 62vw); z-index: 17;
+}
+.call-hint {
+  position: absolute; left: 50%; bottom: 302px; transform: translateX(-50%);
+  width: min(840px, 66vw); margin: 0; z-index: 14;
+}
+.call-citations {
+  position: absolute; left: 50%; bottom: 302px; transform: translateX(-50%);
+  width: min(840px, 66vw); max-height: 17dvh; z-index: 14;
+}
+.call-mode-row { top: auto; bottom: 232px; right: 28px; }
+/* 知识库资料窗打开时，台词框左移避开右侧资料栏 */
+.call.docs-open #call-dialogue { left: 31%; width: min(680px, 46vw); }
+.call.docs-open .call-control-dock { left: 31%; }
+.call.docs-open .call-side-actions { top: 42%; }
+.call.docs-open .call-bubbles { right: auto; left: 28px; }
+
+/* 保留本课面板/资料窗原位置，但避免和台词框相撞 */
+.call-lesson { top: 92px; }
+
+/* 桌面中等宽度 */
+@media (max-width: 1280px) {
+  #call-dialogue { width: min(860px, 76vw); bottom: 120px; }
+  .call.history-open .call-bubbles { width: 330px; }
+}
+/* 小屏兜底（手机端开发暂停，仅保证不崩） */
+@media (max-width: 640px) {
+  #call-dialogue { width: calc(100vw - 24px); bottom: 132px; padding: 13px 15px 15px; }
+  #call-dialogue .cd-en { font-size: 15.5px; }
+  .call-control-dock { gap: 7px; padding: 7px 9px; }
+  .call-control-dock .call-icon-btn { width: 36px; height: 36px; }
+  .call-control-dock .call-talk { width: 68px; height: 68px; }
+  .call.history-open .call-bubbles { left: 12px; right: 12px; width: auto; top: 90px; bottom: 140px; }
+  .call-side-actions { right: 14px; top: 42%; }
+  .call-talk-label { font-size: 10px; }
+}
+
+/* 文字输入时隐藏台词框，避免输入条压在台词上 */
+.call.text-open #call-dialogue { display: none !important; }
+
+/* ============ v4.1 修复：任何提示/诊断都不能压住台词框 ============ */
+/* 麦克风异常卡片：放右上角（用户要求提示放右上；不压台词） */
+.mic-dock:has(.mic-extra:not([hidden])) {
+  position: absolute; left: auto; right: 28px; top: 92px; bottom: auto;
+  transform: none; width: min(360px, 28vw); z-index: 22;
+}
+/* 「给我提示」也放左上，诊断卡下方 */
+.call-hint {
+  position: absolute; left: 28px; right: auto; top: 236px; bottom: auto;
+  transform: none; width: min(360px, 28vw); z-index: 21; margin: 0;
+}
+/* 底部「点一下麦克风」文案不再常驻，避免任何压框 */
+.call-talk-label { display: none !important; }
+/* toast 统一到右上角，不覆盖台词/控制坞 */
+body.call-open .toasts {
+  position: fixed; left: auto; right: 28px; top: 236px; bottom: auto;
+  transform: none; width: min(360px, 30vw); z-index: 140;
+  align-items: flex-end; pointer-events: none;
+}
+body.call-open .toast { max-width: 100%; }
+/* 引用卡片仍在台词框上方，但收窄并靠右，不压台词 */
+.call-citations { left: auto; right: 28px; transform: none; width: min(400px, 30vw); bottom: 302px; }
+
+/* 历史面板打开时，「收起」按钮浮在面板右上角，不会被面板盖住 */
+.call.history-open .call-side-actions {
+  top: 104px; right: 42px; transform: none; z-index: 26;
+}
+
+
+/* ============ v4.4 溢出/重叠兜底 ============ */
+.call { overflow: hidden; }
+#call-dialogue,
+.call-ptt,
+.call-textform,
+.call.history-open .call-bubbles {
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+}
+#call-dialogue { overflow: hidden; }
+.cd-en, .cd-zh, .bubble-en, .bubble-zh { overflow-wrap: anywhere; word-break: break-word; }
+.call.is-recording .call-bubbles,
+.call.is-recording .call-hint,
+.call.is-recording .call-citations,
+.call.is-recording .call-side-actions,
+.call.is-recording .call-mode-row,
+.call.is-recording #mic-dock { display: none !important; }
+.call.is-recording #call-dialogue { display: none !important; }
+@media (max-width: 900px) {
+  #call-dialogue { width: calc(100vw - 32px); bottom: 146px; }
+  .call-control-dock { max-width: calc(100vw - 24px); }
+  .call.history-open .call-bubbles { width: calc(100vw - 32px); right: 16px; }
+  .call-ptt, .call-textform { width: calc(100vw - 32px); }
+}
+@media (max-width: 560px) {
+  .call-control-dock .call-icon-btn { width: 34px; height: 34px; }
+  .call-control-dock .call-talk { width: 64px; height: 64px; }
+  .call-control-dock { gap: 5px; padding: 6px 8px; }
+}
+
+/* ==========================================================================
+   v6.1 记录 / 语音识别显示移到左侧，资料窗打开时也不被遮挡
+   ========================================================================== */
+/* 记录按钮默认在左侧中部 */
+.call-side-actions { left: 28px; right: auto; top: 50%; }
+/* 历史面板也从左侧打开 */
+.call.history-open .call-bubbles { left: 28px; right: auto; width: min(640px, 54vw); }
+.call.history-open .call-side-actions { left: 42px; right: auto; top: 104px; }
+/* 上课模式左侧有本课面板，记录按钮收起，避免压住课件 */
+.call.lesson-mode .call-side-actions { display: none !important; }
+
+@media (min-width: 1101px) {
+  /* 右侧资料窗打开：台词框 / 录音面板 / 文字输入 / 提示全部靠左，宽度限定在剩余 62% 区域内 */
+  .call.docs-open #call-dialogue,
+  .call.docs-open .call-ptt,
+  .call.docs-open .call-textform,
+  .call.docs-open #mic-dock,
+  .call.docs-open .call-hint,
+  .call.docs-open .call-citations {
+    left: 28px;
+    right: auto;
+    transform: none;
+    width: min(680px, calc(100vw - 38vw - 56px));
+  }
+  .call.docs-open .call-side-actions { left: 28px; right: auto; top: 50%; }
+  .call.docs-open .call-bubbles {
+    left: 28px; right: auto;
+    width: min(680px, calc(100vw - 38vw - 56px));
+  }
+  /* 控制坞保持在左半边居中 */
+  .call.docs-open .call-control-dock { left: calc((100% - 38%) / 2); }
+  .call.docs-open .call-talk-label { left: calc((100% - 38%) / 2); }
+}
+
+/* ==========================================================================
+   v6.2 讲解资料阅读模式：段落正文 + 句子级跟随高亮
+   ========================================================================== */
+.call-docs-body .docs-para {
+  margin: 0 0 13px;
+  line-height: 1.82;
+  color: rgba(231, 239, 255, .9);
+}
+.call-docs-body .docs-sentence {
+  border-radius: 5px;
+  padding: 1px 2px;
+  margin: 0 -2px;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.call-docs-body .docs-sentence:hover { background: rgba(255, 255, 255, .07); }
+.call-docs-body .docs-sentence.is-hit {
+  background: rgba(111, 242, 221, .16);
+  color: #ffffff;
+  box-shadow: inset 0 -2px 0 rgba(111, 242, 221, .78);
+}
+.call-docs-body .docs-doc-meta { background: transparent; border: 0; padding: 0 0 8px; }
+.call-docs-body .docs-doc-name { font-size: 13px; }
+
+/* 点击句子朗读：朗读中的视觉状态 + 提示 */
+.docs-read-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 9.5px;
+  color: rgba(111, 242, 221, .62);
+}
+.docs-sentence.is-reading {
+  background: rgba(111, 242, 221, .2);
+  color: #ffffff;
+  box-shadow: inset 0 -2px 0 rgba(111, 242, 221, .9);
+  animation: docs-read-pulse 1.4s ease-in-out infinite;
+}
+@keyframes docs-read-pulse { 0%, 100% { background: rgba(111,242,221,.16); } 50% { background: rgba(111,242,221,.28); } }
+
+/* 资料阅读提示 */
+.docs-doc-meta .docs-read-hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 9.5px;
+  color: rgba(111, 242, 221, .62);
+}
+
+/* ==========================================================================
+   v6.12 长回复完整展示：不再裁成 3 行，台词框内部滚动，页面不拖动
+   ========================================================================== */
+#call-dialogue {
+  max-height: min(44vh, 400px);
+  pointer-events: auto;
+}
+#call-dialogue .cd-en {
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  max-height: 24vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+#call-dialogue .cd-zh {
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: initial;
+  max-height: 13vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+#call-dialogue .cd-en::-webkit-scrollbar,
+#call-dialogue .cd-zh::-webkit-scrollbar { width: 4px; }
+#call-dialogue .cd-en::-webkit-scrollbar-thumb,
+#call-dialogue .cd-zh::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 99px; }
+
+
+/* v6.14：呼叫页不再显示顶部“引用材料”卡片，避免遮挡角色；资料在右侧资料窗查看 */
+.call-citations,
+#call-citations { display: none !important; }

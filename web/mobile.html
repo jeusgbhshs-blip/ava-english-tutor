@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ava">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="Ava 英语会话 — 和 Elena / Maya / Hikari 用英语聊天，随时获取学习计划与复习。">
+<title>Ava 英语会话</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./assets/icons/192.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%235eead4'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%230b0d16'/%3E%3Cpath d='M22 44 32 20l10 24M26.5 37h11' fill='none' stroke='url(%23g)' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./css/mobile.css">
+<link rel="stylesheet" href="./css/review.css">
+<link rel="stylesheet" href="./css/glass.css">
+  <link rel="stylesheet" href="./css/call-redesign.css">
+  <link rel="stylesheet" href="./css/library.css">
+</head>
+<body>
+<!-- 图标精灵（全部内联 SVG） -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+  </defs>
+  <symbol id="m-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></symbol>
+  <symbol id="m-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H8l-5 3 1.4-4.3A8 8 0 1 1 21 12Z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></symbol>
+  <symbol id="m-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 4.9L19 9.8l-4.4 3.4L16 19l-4-2.7L8 19l1.4-5.8L5 9.8l5.1-1.9L12 3Z"/><path d="M19 15l.7 1.8L21.5 17.5l-1.8.9L19 20l-.7-1.6-1.8-.9 1.8-.7L19 15Z"/></symbol>
+  <symbol id="m-game" viewBox="0 0 24 24"><path d="M7 8h10a5 5 0 0 1 5 5v1a4 4 0 0 1-7 2.6L13.5 16h-3L9 16.6A4 4 0 0 1 2 14v-1a5 5 0 0 1 5-5Z"/><path d="M7.5 11.5h3M9 10v3M15.5 11h.01M18 12.5h.01"/></symbol>
+  <symbol id="m-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 21c.8-4 3.7-6 7.5-6s6.7 2 7.5 6"/></symbol>
+  <symbol id="m-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="m-hangup" viewBox="0 0 24 24"><path d="M4.2 14.5c4.8-4.7 10.8-4.7 15.6 0"/><path d="M7.2 11.6 5.4 15a1.4 1.4 0 0 0 .5 1.9l2 1.1M16.8 11.6l1.8 3.4a1.4 1.4 0 0 1-.5 1.9l-2 1.1"/></symbol>
+  <symbol id="m-mic" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7"/></symbol>
+  <symbol id="m-mic-off" viewBox="0 0 24 24"><path d="M9 9v3a3 3 0 0 0 6 0V6a3 3 0 0 0-5.2-2.1"/><path d="M5 11a7 7 0 0 0 11 5.3M19 11a7 7 0 0 1-.6 2.8M12 18v3M8.5 21h7M3 3l18 18"/></symbol>
+  <symbol id="m-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/></symbol>
+  <symbol id="m-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/></symbol>
+  <symbol id="m-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9.5 9.5 0 0 1 0 13"/></symbol>
+  <symbol id="m-translate" viewBox="0 0 24 24"><path d="M4 5h9M8.5 5c0 4-2 7-4.5 9"/><path d="M6 9c1.3 2.5 3.2 4.4 6 5.5"/><path d="M13 20l4-11 4 11M14.6 16.5h4.8"/></symbol>
+  <symbol id="m-signal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-6M14 20v-9M19 20V8"/></symbol>
+  <symbol id="m-battery" viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2.5"/><path d="M22 10v4"/><rect x="4.5" y="9.5" width="10" height="5" rx="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="m-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="m-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+  <symbol id="m-send" viewBox="0 0 24 24"><path d="m4.5 12 15-7-7 15-2-6-6-2Z"/></symbol>
+  <symbol id="m-star" viewBox="0 0 24 24"><path d="m12 2.8 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.6l6.5-.9L12 2.8Z"/></symbol>
+  <symbol id="m-flame" viewBox="0 0 24 24"><path d="M12 22c4 0 7-2.7 7-6.5 0-3.2-2-5.4-3.4-7.2C14.4 6.9 13 5 13 2c-3 2-4 5-4 8 0 1.2.3 2.2.8 3-1-.2-1.9-.8-2.5-1.7C6.5 13 5 14.6 5 16.5 5 20 8.2 22 12 22Z"/></symbol>
+  <symbol id="m-book" viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5V4.5Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></symbol>
+  <symbol id="m-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="m-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15.5-6.4L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.4L3 16M3 21v-5h5"/></symbol>
+  <symbol id="m-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/></symbol>
+  <symbol id="m-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></symbol>
+</svg>
+
+<div class="app" id="app">
+  <!-- ============ 全屏人物世界（首页/面板背景） ============ -->
+  <div class="world" id="world" aria-hidden="true">
+    <img class="world-img is-on" id="world-img-a" alt="" draggable="false">
+    <img class="world-img" id="world-img-b" alt="" draggable="false">
+    <div class="world-tint" id="world-tint"></div>
+    <div class="world-vignette"></div>
+    <div class="world-scan"></div>
+    <div class="world-particles" id="world-particles"></div>
+  </div>
+
+  <!-- HUD 四角装饰 -->
+  <div class="hud-frame" aria-hidden="true"><i class="hud-corner tl"></i><i class="hud-corner tr"></i><i class="hud-corner bl"></i><i class="hud-corner br"></i></div>
+
+  <!-- ============ 屏幕区 ============ -->
+  <main class="screens" id="screens">
+    <section class="screen" id="screen-courses" hidden aria-label="课程"></section>
+    <section class="screen screen-hero" id="screen-chat" hidden aria-label="对话"></section>
+    <section class="screen" id="screen-assistant" hidden aria-label="Ava 助手"></section>
+    <section class="screen" id="screen-profile" hidden aria-label="我的"></section>
+    <section class="screen" id="screen-review" hidden aria-label="复习"></section>
+  </main>
+
+  <!-- ============ 知识库整屏面板（助手页入口，v1.8） ============ -->
+  <section class="kb-screen" id="kb-screen" hidden aria-label="知识库"></section>
+
+  <!-- ============ 底部 5 Tab（游戏 HUD 导航，键盘 1-5；v2.8 移除「趣玩」，小游戏统一到「复习」） ============ -->
+  <nav class="tabbar" id="tabbar" role="tablist" aria-label="主导航">
+    <button type="button" class="tab is-active" data-tab="courses" data-key="1" role="tab" aria-selected="true">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-home"></use></svg>
+      <span>课程</span><em class="tab-key">1</em>
+    </button>
+    <button type="button" class="tab" data-tab="chat" data-key="2" role="tab" aria-selected="false">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-chat"></use></svg>
+      <span>对话</span><em class="tab-key">2</em>
+    </button>
+    <button type="button" class="tab tab-assistant" data-tab="assistant" data-key="3" role="tab" aria-selected="false">
+      <span class="tab-orb"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-spark"></use></svg></span>
+      <span>助手</span><em class="tab-key">3</em>
+    </button>
+    <!-- v2.8：复习（SRS 单词复习 + 词库 + 小游戏），游戏统一收敛到这里 -->
+    <button type="button" class="tab tab-review" data-tab="review" data-key="4" role="tab" aria-selected="false" aria-label="复习">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="12" height="16" rx="2.6"/><path d="M8 2.6h9.4A2.6 2.6 0 0 1 20 5.2V16"/><path d="M6.8 10h4.4M6.8 13.5h4.4M6.8 17h2.6"/></svg>
+      <span>复习</span><em class="tab-key">4</em>
+      <i class="tab-due" id="tab-due" hidden>0</i>
+    </button>
+    <button type="button" class="tab" data-tab="profile" data-key="5" role="tab" aria-selected="false">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-user"></use></svg>
+      <span>我的</span><em class="tab-key">5</em>
+    </button>
+  </nav>
+
+  <!-- ============ 全屏通话页 ============ -->
+  <section class="call" id="call" hidden aria-label="通话">
+    <div class="call-bg" id="call-bg"></div>
+    <div class="call-cover" id="call-cover">
+      <div class="call-cover-fallback" id="call-cover-fallback"></div>
+      <img class="call-cover-img" id="call-cover-img" alt="" draggable="false">
+      <div class="talking-host" id="talking-host" hidden></div>
+      <div class="call-ripple" id="call-ripple" aria-hidden="true"></div>
+    </div>
+    <div class="call-glow" id="call-glow" aria-hidden="true"></div>
+    <div class="call-particles" id="call-particles" aria-hidden="true"></div>
+
+    <header class="call-top">
+      <button type="button" class="call-icon-btn" id="call-back" aria-label="返回">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-back"></use></svg>
+      </button>
+      <div class="call-meta">
+        <div class="call-name-row">
+          <span class="call-name" id="call-name">Elena</span>
+          <span class="call-verified" aria-hidden="true">✓</span>
+          <span class="call-live"><i></i>LIVE</span>
+        </div>
+        <div class="call-sub" id="call-sub">伦敦 · 画廊策展人</div>
+      </div>
+    </header>
+
+    <!-- 环境/权限醒目提示（v2.5：非安全上下文 / 麦克风被阻止） -->
+    <div class="call-env-banner" id="call-env-banner" hidden role="status"></div>
+
+    <div class="call-status-icons" aria-hidden="true">
+      <svg class="icon" viewBox="0 0 24 24"><use href="#m-signal"></use></svg>
+      <span class="call-timer" id="call-timer">00:00</span>
+      <svg class="icon" viewBox="0 0 24 24"><use href="#m-battery"></use></svg>
+    </div>
+
+    <div class="call-scene-row">
+      <span class="call-signal-label" id="call-signal-label">实时语音 · 已连接</span>
+    </div>
+
+    <!-- 方案 C：右侧历史记录开关 -->
+    <div class="call-side-actions">
+      <button type="button" class="call-glass-btn" id="call-history-btn" aria-label="对话记录" aria-pressed="false">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-chat"></use></svg>
+        <span id="call-history-label">记录</span>
+      </button>
+    </div>
+
+    <div class="call-mode-row" id="call-mode-row"></div>
+
+    <div class="call-bubbles" id="call-bubbles" aria-live="polite"></div>
+    <div class="call-hint" id="call-hint" hidden></div>
+
+    <!-- 知识库引用卡片（v1.8：最多 3 条，可折叠；无引用隐藏） -->
+    <div class="call-citations" id="call-citations" hidden aria-label="引用材料"></div>
+
+    <!-- 角色对话条（v1.8 游戏式固定对话框：角色名 + 英文当前句 + 中文译文） -->
+    <div class="call-dialogue" id="call-dialogue" hidden aria-live="polite">
+      <div class="cd-head">
+        <span class="cd-dot" aria-hidden="true"></span>
+        <span class="cd-name" id="cd-name">Elena</span>
+        <span class="cd-tag">EN · 中文</span>
+        <span class="cd-status" id="cd-status">在线</span>
+      </div>
+      <div class="cd-user" id="cd-user" hidden></div>
+      <div class="cd-en" id="cd-en"></div>
+      <div class="cd-zh" id="cd-zh" hidden></div>
+    </div>
+
+    <div class="call-bottom">
+      <!-- 麦克风自检 / 诊断（v2.3：状态 + 实时音量 + 重新授权 / 改用文字输入） -->
+      <div class="mic-dock" id="mic-dock">
+        <div class="mic-row">
+          <span class="mic-dot" id="mic-dot" aria-hidden="true"></span>
+          <span class="mic-label" id="mic-label">正在检查麦克风…</span>
+          <div class="mic-volume" id="mic-volume" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="mic-extra" id="mic-extra" hidden>
+          <p class="mic-message" id="mic-message"></p>
+          <div class="mic-buttons">
+            <button type="button" class="mic-btn" id="mic-retry" hidden>重新授权麦克风</button>
+            <button type="button" class="mic-btn" id="mic-diag-btn" hidden>复制诊断信息</button>
+            <button type="button" class="mic-btn primary" id="mic-text-btn">改用文字输入</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PTT 录音面板（v2.3：再点一次大麦克风结束，面板只保留取消） -->
+      <div class="call-ptt" id="call-ptt" hidden aria-live="polite">
+        <div class="ptt-head">
+          <span class="ptt-dot" aria-hidden="true"></span>
+          <span class="ptt-timer" id="ptt-timer">00:00</span>
+          <span class="ptt-hint" id="ptt-hint">正在录音… 再点一次麦克风结束</span>
+        </div>
+        <div class="ptt-wave" id="ptt-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="ptt-actions">
+          <button type="button" class="ptt-btn ptt-cancel" id="ptt-cancel" aria-label="取消本次录音">✕ 取消</button>
+        </div>
+      </div>
+      <div class="call-control-dock" id="call-control-dock">
+        <button type="button" class="call-icon-btn" id="call-text-btn" aria-label="切换文字输入">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-keyboard"></use></svg>
+        </button>
+        <button type="button" class="call-icon-btn" id="call-toggle-mute" aria-label="静音" aria-pressed="false">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-volume"></use></svg>
+        </button>
+        <button type="button" class="call-icon-btn" id="call-toggle-translate" aria-label="翻译字幕" aria-pressed="true">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-translate"></use></svg>
+        </button>
+        <button type="button" class="call-talk" id="call-talk" aria-label="点击开始说话（再点结束）">
+          <span class="call-talk-ring" aria-hidden="true"></span>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-mic"></use></svg>
+        </button>
+        <button type="button" class="call-icon-btn" id="call-hint-btn" aria-label="给我提示">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-bulb"></use></svg>
+        </button>
+        <button type="button" class="call-icon-btn call-hangup" id="call-hangup" aria-label="挂断">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-hangup"></use></svg>
+        </button>
+      </div>
+      <div class="call-talk-label" id="call-talk-label">按住说话 · 松开发送</div>
+      <form class="call-textform" id="call-textform" hidden>
+        <input type="text" id="call-text-input" class="input" placeholder="也可以打字说英文/中文…" maxlength="300" autocomplete="off" spellcheck="false">
+        <button type="submit" class="send-btn" aria-label="发送">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-send"></use></svg>
+        </button>
+      </form>
+    </div>
+
+    <!-- 本课教学面板（v3.0 数字人老师上课） -->
+    <aside class="call-lesson" id="call-lesson" hidden aria-label="本课教学">
+      <header class="cl-head">
+        <span class="cl-emoji" id="cl-emoji">📘</span>
+        <div class="cl-title-wrap">
+          <strong class="cl-title" id="cl-title">本课</strong>
+          <small class="cl-sub" id="cl-sub">A2 · 3 步 · 5 句</small>
+        </div>
+        <div class="cl-actions">
+          <button type="button" class="cl-btn" id="cl-free">自由聊</button>
+          <button type="button" class="cl-btn cl-toggle" id="cl-toggle" aria-expanded="true">收起</button>
+        </div>
+      </header>
+      <div class="cl-steps" id="cl-steps"></div>
+      <div class="cl-body">
+        <div class="cl-status" id="cl-status"></div>
+        <div class="cl-goals" id="cl-goals"></div>
+        <p class="cl-task" id="cl-task"></p>
+        <div class="cl-phrases" id="cl-phrases" aria-live="polite"></div>
+      </div>
+    </aside>
+
+    <!-- 讲解资料对照窗（v2.7 方案 A：桌面右侧玻璃栏 / 移动底部抽屉） -->
+    <aside class="call-docs" id="call-docs" hidden aria-label="讲解资料对照窗">
+      <div class="call-docs-handle" id="call-docs-handle" aria-hidden="true"><i></i></div>
+      <header class="call-docs-head" id="call-docs-head">
+        <div class="call-docs-brand">
+          <span class="call-docs-orb" aria-hidden="true">📖</span>
+          <div class="call-docs-brand-copy">
+            <strong>讲解资料</strong>
+            <small>跟随讲解 · 自动高亮当前段落</small>
+          </div>
+        </div>
+        <div class="call-docs-tools">
+          <label class="docs-follow" title="跟随讲解自动高亮">
+            <input type="checkbox" id="docs-follow" checked>
+            <span>跟随讲解</span>
+          </label>
+          <div class="docs-font" role="group" aria-label="字号">
+            <button type="button" id="docs-font-dec" aria-label="减小字号">A-</button>
+            <button type="button" id="docs-font-inc" aria-label="增大字号">A+</button>
+          </div>
+          <button type="button" class="docs-tool-btn" id="docs-collapse" aria-label="收起资料窗">收起</button>
+          <button type="button" class="docs-tool-btn is-close" id="docs-close" aria-label="关闭资料窗">✕</button>
+        </div>
+      </header>
+      <div class="call-docs-tabs" id="call-docs-tabs" role="tablist" aria-label="材料切换"></div>
+      <div class="call-docs-body" id="call-docs-body" aria-live="polite"></div>
+      <div class="call-docs-status" id="call-docs-status" hidden></div>
+    </aside>
+  </section>
+
+  <!-- ============ 底部弹层容器 ============ -->
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+  <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true">
+    <div class="sheet-head">
+      <span class="sheet-title" id="sheet-title">提示</span>
+      <button type="button" class="icon-btn" id="sheet-close" aria-label="关闭">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#m-close"></use></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</div>
+
+<script type="module" src="./js/mobile/app.js"></script>
+</body>
+</html>

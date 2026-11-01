@@ -1,0 +1,1259 @@
+/* ==========================================================================
+   v2.7 复习 Tab · 单词 SRS + 词库管理 + 小游戏
+   —— 只放「复习」相关样式：第 6 个 HUD Tab / due 徽标 / 复习首页 / 卡片会话 /
+      词库管理 / 小游戏 / 响应式。全部复用 mobile.css 的设计 token，不覆盖通话页。
+   ========================================================================== */
+
+/* ==========================================================================
+   1. 底部 HUD 第 6 个 Tab「复习」+ dueCount 徽标
+   ========================================================================== */
+/* 有到期徽标时让出右上角给徽标，否则保留键盘提示 4 */
+.tab-review.has-due .tab-key { display: none; }
+.tab-due {
+  position: absolute; top: 1px; right: 4px;
+  min-width: 17px; height: 17px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  font-family: var(--font-en);
+  font-size: 9.5px; font-weight: 800; font-style: normal; line-height: 1;
+  color: #061019;
+  background: linear-gradient(135deg, #ffe6a8, var(--m-warm) 55%, #ff9f6e 135%);
+  box-shadow: 0 4px 12px -4px rgba(255, 197, 122, .9), inset 0 1px 0 rgba(255, 255, 255, .6);
+  pointer-events: none;
+  animation: rv-badge-in .3s var(--m-ease);
+}
+.tab-due[hidden] { display: none !important; }
+.tab.is-active .tab-due { color: #2b1600; }
+@keyframes rv-badge-in { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ==========================================================================
+   2. 通用原子（标题 / 图标按钮 / 空态 / 加载 / chip）
+   ========================================================================== */
+.rv-wrap { width: 100%; max-width: 1180px; margin: 0 auto; }
+.rv-wrap.narrow { max-width: 820px; }
+
+.rv-iconbtn {
+  width: 38px; height: 38px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: rgba(13, 18, 31, .7);
+  color: rgba(214, 224, 248, .82);
+  transition: .2s var(--m-ease);
+}
+.rv-iconbtn:hover { color: #fff; background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .26); }
+.rv-iconbtn .icon { width: 18px; height: 18px; }
+.rv-iconbtn.is-danger { color: #ff9aa8; border-color: rgba(255, 113, 136, .32); }
+.rv-iconbtn.is-danger:hover { background: rgba(255, 113, 136, .16); color: #ffd4da; }
+
+.rv-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 650; letter-spacing: .02em;
+  color: rgba(214, 224, 248, .8);
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: rgba(255, 255, 255, .05);
+  white-space: nowrap;
+}
+.rv-chip .icon { width: 12px; height: 12px; }
+.rv-chip.teal { color: var(--m-teal); border-color: rgba(111, 242, 221, .3); background: rgba(111, 242, 221, .1); }
+.rv-chip.warm { color: var(--m-warm); border-color: rgba(255, 197, 122, .32); background: rgba(255, 197, 122, .1); }
+.rv-chip.violet { color: #d6c8ff; border-color: rgba(180, 156, 255, .32); background: rgba(180, 156, 255, .1); }
+.rv-chip.ok { color: var(--m-ok); border-color: rgba(94, 234, 157, .3); background: rgba(94, 234, 157, .1); }
+
+.rv-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 46px 22px; text-align: center;
+  border-radius: 22px;
+  border: 1px dashed rgba(148, 163, 196, .26);
+  background: linear-gradient(158deg, rgba(12, 16, 28, .92), rgba(7, 10, 18, .86));
+}
+.rv-empty-orb {
+  width: 54px; height: 54px; border-radius: 18px;
+  display: grid; place-items: center;
+  color: var(--m-teal);
+  background: radial-gradient(circle at 32% 26%, rgba(214, 255, 248, .28), rgba(111, 242, 221, .14) 55%, rgba(124, 109, 242, .16));
+  border: 1px solid rgba(111, 242, 221, .26);
+  box-shadow: 0 0 30px -10px rgba(111, 242, 221, .7);
+}
+.rv-empty-orb .icon { width: 24px; height: 24px; }
+.rv-empty strong { font-size: 15.5px; font-weight: 750; }
+.rv-empty p { font-size: 12.5px; color: var(--m-muted); line-height: 1.65; max-width: 46ch; }
+.rv-empty-actions { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin-top: 4px; }
+
+.rv-loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 44px 12px; color: var(--m-muted); font-size: 12.5px; }
+.rv-loading .spinner { width: 22px; height: 22px; }
+
+.rv-section-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 22px 0 11px; }
+.rv-section-row .section-title { font-size: 14.5px; }
+.rv-section-row .section-more { font-size: 11.5px; color: var(--m-faint); }
+
+/* ==========================================================================
+   3. 复习首页
+   ========================================================================== */
+.rv-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 4px 0 16px; }
+.rv-head .m-title { margin-top: 3px; }
+.rv-head-actions { display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+
+.rv-hero {
+  position: relative; overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 26px; align-items: center;
+  padding: 26px 30px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(111, 242, 221, .16), transparent 58%),
+    radial-gradient(120% 160% at 100% 0%, rgba(180, 156, 255, .18), transparent 62%),
+    linear-gradient(158deg, rgba(13, 18, 31, .92), rgba(7, 10, 18, .78));
+  box-shadow: 0 30px 70px -36px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+.rv-hero::after {
+  content: ""; position: absolute; right: -80px; top: -120px; width: 340px; height: 340px;
+  border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(111, 242, 221, .2), transparent 62%);
+  filter: blur(6px);
+}
+.rv-hero-copy { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.rv-hero-label { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 750; letter-spacing: .2em; text-transform: uppercase; color: var(--m-teal); }
+.rv-hero-label .icon { width: 14px; height: 14px; }
+.rv-hero-count { display: flex; align-items: baseline; gap: 9px; }
+.rv-hero-count strong {
+  font-family: var(--font-en);
+  font-size: clamp(54px, 6.2vw, 86px); font-weight: 800; line-height: .95; letter-spacing: -.04em;
+  background: linear-gradient(135deg, #eafffb 0%, var(--m-teal) 46%, #a99bff 130%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 8px 26px rgba(111, 242, 221, .32));
+}
+.rv-hero-count span { font-size: 13.5px; color: var(--m-muted); font-weight: 600; }
+.rv-hero-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; color: var(--m-muted); }
+.rv-hero-stats b { font-family: var(--font-en); font-size: 15px; color: var(--m-text); margin-right: 4px; }
+.rv-hero-stats span { display: inline-flex; align-items: baseline; white-space: nowrap; }
+.rv-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.rv-hero-actions .btn { min-height: 44px; padding: 0 24px; font-size: 14px; border-radius: 14px; }
+.rv-hero-actions .btn .icon { width: 16px; height: 16px; }
+.rv-hero-actions .btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+.rv-ring { position: relative; z-index: 1; width: 168px; height: 168px; flex: none; display: grid; place-items: center; }
+.rv-ring-track {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(var(--m-teal) calc(var(--pct, 0) * 1%), rgba(255, 255, 255, .09) 0);
+  mask: radial-gradient(circle, transparent 56%, #000 57%);
+  -webkit-mask: radial-gradient(circle, transparent 56%, #000 57%);
+  filter: drop-shadow(0 0 16px rgba(111, 242, 221, .35));
+}
+.rv-ring-inner {
+  width: 118px; height: 118px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: radial-gradient(circle at 50% 34%, rgba(24, 31, 50, .96), rgba(8, 11, 19, .98));
+  border: 1px solid rgba(255, 255, 255, .1);
+}
+.rv-ring-inner strong { font-family: var(--font-en); font-size: 30px; font-weight: 800; line-height: 1; color: var(--m-text); }
+.rv-ring-inner span { font-size: 10px; letter-spacing: .12em; color: var(--m-faint); }
+
+/* 入口卡片：词库管理 / 今日操作 */
+.rv-entries { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.rv-entry {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 20px; text-align: left;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  background: linear-gradient(158deg, rgba(13, 18, 31, .86), rgba(7, 10, 18, .68));
+  color: var(--m-text);
+  transition: .22s var(--m-ease);
+}
+.rv-entry:hover { transform: translateY(-2px); border-color: rgba(111, 242, 221, .34); box-shadow: 0 26px 50px -30px rgba(0, 0, 0, .95); }
+.rv-entry-orb {
+  width: 46px; height: 46px; flex: none; border-radius: 15px;
+  display: grid; place-items: center;
+  color: var(--m-teal);
+  background: rgba(111, 242, 221, .1);
+  border: 1px solid rgba(111, 242, 221, .24);
+}
+.rv-entry-orb .icon { width: 22px; height: 22px; }
+.rv-entry-orb.warm { color: var(--m-warm); background: rgba(255, 197, 122, .1); border-color: rgba(255, 197, 122, .26); }
+.rv-entry-orb.violet { color: #d6c8ff; background: rgba(180, 156, 255, .12); border-color: rgba(180, 156, 255, .28); }
+.rv-entry-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.rv-entry-copy strong { font-size: 14.5px; font-weight: 720; }
+.rv-entry-copy small { font-size: 11px; color: var(--m-faint); line-height: 1.5; }
+.rv-entry-go { color: var(--m-faint); flex: none; display: grid; place-items: center; }
+.rv-entry-go .icon { width: 17px; height: 17px; }
+.rv-entry-badge {
+  position: absolute; top: 12px; right: 14px;
+  font-family: var(--font-en); font-size: 10.5px; font-weight: 700;
+  color: var(--m-teal); background: rgba(111, 242, 221, .12);
+  border: 1px solid rgba(111, 242, 221, .3); border-radius: 999px; padding: 2px 8px;
+}
+
+/* 小游戏入口 */
+.rv-games { display: grid; grid-template-columns: repeat(auto-fit, minmax(236px, 1fr)); gap: 12px; }
+.rv-game-card {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px; text-align: left;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  background:
+    radial-gradient(120% 130% at 100% 0%, rgba(180, 156, 255, .14), transparent 60%),
+    linear-gradient(158deg, rgba(12, 16, 28, .94), rgba(7, 10, 18, .9));
+  color: var(--m-text);
+  transition: .22s var(--m-ease);
+}
+.rv-game-card:hover { transform: translateY(-2px); border-color: rgba(180, 156, 255, .4); box-shadow: 0 26px 50px -30px rgba(0, 0, 0, .95); }
+.rv-game-top { display: flex; align-items: center; gap: 10px; }
+.rv-game-icon {
+  width: 40px; height: 40px; flex: none; border-radius: 13px;
+  display: grid; place-items: center;
+  color: #061019;
+  background: linear-gradient(145deg, #bffcf2, var(--m-teal) 58%, #a99bff 140%);
+  box-shadow: 0 10px 24px -12px var(--m-teal);
+}
+.rv-game-icon .icon { width: 20px; height: 20px; }
+.rv-game-icon.violet { background: linear-gradient(145deg, #e3d9ff, #b49cff 58%, #7c6df2 140%); box-shadow: 0 10px 24px -12px rgba(180, 156, 255, .7); }
+.rv-game-icon.warm { background: linear-gradient(145deg, #ffe6b8, var(--m-warm) 58%, #ff9f6e 140%); box-shadow: 0 10px 24px -12px rgba(255, 197, 122, .7); }
+.rv-game-title { font-size: 14px; font-weight: 720; }
+.rv-game-sub { font-size: 11px; color: var(--m-faint); line-height: 1.55; }
+.rv-game-go { margin-top: auto; display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; color: var(--m-teal); }
+.rv-game-go .icon { width: 13px; height: 13px; }
+.rv-foot { margin-top: 26px; text-align: center; font-size: 10.5px; color: rgba(152, 163, 194, .45); line-height: 1.7; }
+
+/* 最近加入的单词（首页底部，填满桌面纵向空间） */
+.rv-recent { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.rv-recent-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(10, 14, 24, .9);
+  transition: border-color .2s, transform .2s var(--m-ease);
+}
+.rv-recent-row:hover { border-color: rgba(111, 242, 221, .3); transform: translateY(-1px); }
+.rv-recent-row .rv-row-audio { width: 34px; height: 34px; border-radius: 11px; }
+.rv-recent-row .rv-row-audio .icon { width: 16px; height: 16px; }
+.rv-recent-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rv-recent-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.rv-recent-top b { font-family: var(--font-en); font-size: 14px; font-weight: 720; }
+.rv-recent-meaning { font-size: 11px; color: var(--m-muted); line-height: 1.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-recent-row .rv-mini { flex: none; }
+.rv-recent-skel {
+  height: 58px; border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, .06);
+  background: linear-gradient(100deg, rgba(255, 255, 255, .03), rgba(255, 255, 255, .07), rgba(255, 255, 255, .03));
+  background-size: 220% 100%;
+  animation: rv-skel 1.3s ease-in-out infinite;
+}
+@keyframes rv-skel { 0% { background-position: 130% 0; } 100% { background-position: -60% 0; } }
+
+/* ==========================================================================
+   4. 复习会话（卡片翻转 + 四档评分）
+   ========================================================================== */
+.rv-session { display: flex; flex-direction: column; gap: 16px; max-width: 760px; margin: 0 auto; }
+.rv-session-top { display: flex; align-items: center; gap: 14px; }
+.rv-session-progress { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.rv-session-progress-row { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--m-muted); }
+.rv-session-progress-row b { font-family: var(--font-en); font-size: 13px; color: var(--m-text); font-weight: 750; }
+.rv-progress-bar { height: 7px; border-radius: 999px; background: rgba(148, 163, 196, .16); overflow: hidden; }
+.rv-progress-bar i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--m-teal), #8fd8ff 55%, var(--m-violet)); box-shadow: 0 0 14px -2px rgba(111, 242, 221, .7); transition: width .45s var(--m-ease); }
+.rv-session-score { display: flex; align-items: center; gap: 6px; flex: none; }
+
+.rv-card { position: relative; height: clamp(300px, 42vh, 386px); perspective: 1500px; cursor: pointer; user-select: none; }
+.rv-card-inner { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .58s cubic-bezier(.22, 1, .36, 1); }
+.rv-card.is-flipped .rv-card-inner { transform: rotateY(180deg); }
+.rv-face {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 30px;
+  border-radius: 26px;
+  overflow: hidden;
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  border: 1px solid rgba(255, 255, 255, .15);
+  background:
+    radial-gradient(120% 130% at 50% 0%, rgba(111, 242, 221, .14), transparent 58%),
+    radial-gradient(120% 150% at 100% 100%, rgba(180, 156, 255, .16), transparent 62%),
+    linear-gradient(158deg, rgba(15, 20, 35, .96), rgba(7, 10, 18, .9));
+  box-shadow: 0 34px 80px -40px rgba(0, 0, 0, .98), inset 0 1px 0 rgba(255, 255, 255, .07);
+}
+.rv-face.front::after {
+  content: ""; position: absolute; inset: -40%;
+  background: radial-gradient(circle at 50% 50%, rgba(111, 242, 221, .1), transparent 58%);
+  animation: rv-orbit 14s linear infinite; pointer-events: none;
+}
+@keyframes rv-orbit { to { transform: rotate(360deg); } }
+.rv-face.back {
+  transform: rotateY(180deg);
+  align-items: flex-start; justify-content: flex-start; gap: 10px;
+  padding: 26px 28px;
+  overflow-y: auto;
+  background:
+    radial-gradient(120% 130% at 0% 0%, rgba(180, 156, 255, .16), transparent 58%),
+    linear-gradient(158deg, rgba(15, 20, 35, .97), rgba(7, 10, 18, .92));
+}
+.rv-card-eyebrow { font-size: 10px; font-weight: 750; letter-spacing: .22em; text-transform: uppercase; color: var(--m-teal); }
+.rv-word-row { display: flex; align-items: center; gap: 14px; }
+.rv-word {
+  font-family: var(--font-en);
+  font-size: clamp(38px, 5.6vw, 66px); font-weight: 800; letter-spacing: -.025em;
+  line-height: 1.05; text-align: center;
+  background: linear-gradient(160deg, #ffffff 0%, #dcfffa 38%, var(--m-teal) 82%, #a99bff 135%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 12px 32px rgba(111, 242, 221, .28));
+  word-break: break-word;
+}
+.rv-word.small { font-size: clamp(24px, 3vw, 32px); text-align: left; }
+.rv-speak {
+  width: 52px; height: 52px; flex: none; border-radius: 50%;
+  display: grid; place-items: center;
+  color: #061019;
+  border: 0;
+  background: linear-gradient(145deg, #c9fff7, var(--m-teal) 55%, #a99bff 145%);
+  box-shadow: 0 14px 34px -14px rgba(111, 242, 221, .95), inset 0 1px 0 rgba(255, 255, 255, .55);
+  transition: transform .18s var(--m-ease), filter .18s;
+}
+.rv-speak:hover { filter: brightness(1.06); transform: scale(1.04); }
+.rv-speak:active { transform: scale(.96); }
+.rv-speak .icon { width: 23px; height: 23px; }
+.rv-speak.is-playing { animation: rv-speak-pulse .8s ease-in-out infinite; }
+@keyframes rv-speak-pulse { 0%, 100% { transform: scale(1); box-shadow: 0 14px 34px -14px rgba(111, 242, 221, .95); } 50% { transform: scale(1.07); box-shadow: 0 14px 44px -10px rgba(111, 242, 221, 1); } }
+.rv-card-tip { font-size: 11.5px; color: var(--m-faint); letter-spacing: .02em; }
+.rv-flip-btn {
+  margin-top: 4px; padding: 9px 20px; border-radius: 12px;
+  font-size: 12.5px; font-weight: 700;
+  color: var(--m-text);
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: rgba(255, 255, 255, .07);
+  transition: .2s var(--m-ease);
+}
+.rv-flip-btn:hover { background: rgba(111, 242, 221, .12); border-color: rgba(111, 242, 221, .4); color: var(--m-teal); }
+
+.rv-back-word { display: flex; align-items: center; gap: 12px; width: 100%; }
+.rv-phonetic { font-family: var(--font-en); font-size: 14px; color: var(--m-teal); letter-spacing: .01em; }
+.rv-meaning { font-size: clamp(19px, 2.2vw, 26px); font-weight: 720; line-height: 1.4; }
+.rv-example {
+  position: relative; width: 100%;
+  padding: 12px 14px 12px 34px;
+  border-radius: 13px;
+  font-family: var(--font-en); font-size: 13.5px; line-height: 1.6;
+  color: rgba(226, 233, 250, .92);
+  background: rgba(111, 242, 221, .06);
+  border: 1px solid rgba(111, 242, 221, .16);
+}
+.rv-example .icon { position: absolute; left: 12px; top: 13px; width: 14px; height: 14px; color: var(--m-teal); opacity: .7; }
+.rv-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.rv-meta-label { font-size: 10.5px; color: var(--m-faint); }
+
+.rv-grades { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.rv-grade {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 13px 8px; border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(10, 14, 24, .92);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--m-text);
+  transition: .18s var(--m-ease);
+}
+.rv-grade strong { font-size: 14.5px; font-weight: 750; }
+.rv-grade em { font-size: 9.5px; font-style: normal; letter-spacing: .04em; opacity: .62; }
+.rv-grade:hover { transform: translateY(-2px); }
+.rv-grade:active { transform: scale(.97); }
+.rv-grade[data-grade="again"] { color: #ffd4da; border-color: rgba(255, 113, 136, .36); background: rgba(255, 113, 136, .1); }
+.rv-grade[data-grade="hard"] { color: #ffe0b0; border-color: rgba(255, 197, 122, .36); background: rgba(255, 197, 122, .1); }
+.rv-grade[data-grade="good"] { color: #b8fff0; border-color: rgba(111, 242, 221, .38); background: rgba(111, 242, 221, .1); }
+.rv-grade[data-grade="easy"] { color: #d9ccff; border-color: rgba(180, 156, 255, .4); background: rgba(180, 156, 255, .12); }
+.rv-grade[disabled] { opacity: .55; pointer-events: none; }
+.rv-session-hint { text-align: center; font-size: 11.5px; color: var(--m-faint); line-height: 1.6; min-height: 18px; transition: color .2s; }
+.rv-session-hint.ok { color: var(--m-ok); }
+.rv-session-hint.bad { color: #ffb4c0; }
+
+/* ==========================================================================
+   5. 一轮结束统计
+   ========================================================================== */
+.rv-finish { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.rv-finish-hero {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 34px 26px 30px;
+  border-radius: 26px; text-align: center;
+  border: 1px solid rgba(255, 197, 122, .26);
+  background:
+    radial-gradient(120% 140% at 50% 0%, rgba(255, 197, 122, .18), transparent 62%),
+    linear-gradient(158deg, rgba(15, 20, 35, .95), rgba(7, 10, 18, .9));
+  box-shadow: 0 30px 70px -36px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+.rv-finish-orb {
+  width: 74px; height: 74px; border-radius: 24px;
+  display: grid; place-items: center;
+  color: #2b1600;
+  background: linear-gradient(145deg, #fff2d1, var(--m-warm) 52%, #ff9f6e 140%);
+  box-shadow: 0 18px 44px -18px rgba(255, 197, 122, .9), inset 0 1px 0 rgba(255, 255, 255, .7);
+  animation: rv-pop .5s var(--m-ease);
+}
+.rv-finish-orb .icon { width: 34px; height: 34px; }
+@keyframes rv-pop { 0% { transform: scale(.5) rotate(-12deg); opacity: 0; } 70% { transform: scale(1.06) rotate(3deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+.rv-finish h2 { font-size: clamp(21px, 2.4vw, 28px); font-weight: 800; letter-spacing: -.02em; }
+.rv-finish-sub { font-size: 12.5px; color: var(--m-muted); line-height: 1.6; max-width: 44ch; }
+.rv-finish-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin-top: 8px; }
+.rv-finish-stat { padding: 14px 10px; border-radius: 16px; text-align: center; border: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .04); }
+.rv-finish-stat strong { display: block; font-family: var(--font-en); font-size: 28px; font-weight: 800; line-height: 1.1; }
+.rv-finish-stat span { font-size: 10.5px; color: var(--m-muted); }
+.rv-finish-stat.good strong { color: var(--m-teal); }
+.rv-finish-stat.again strong { color: var(--m-warm); }
+.rv-finish-stat.total strong { color: var(--m-text); }
+.rv-finish-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 6px; }
+.rv-finish-actions .btn { min-height: 44px; padding: 0 24px; border-radius: 14px; font-size: 13.5px; }
+.rv-finish-list { display: flex; flex-direction: column; gap: 7px; }
+.rv-finish-list-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, .1); background: rgba(10, 14, 24, .9);
+  font-size: 12.5px;
+}
+.rv-finish-list-row b { font-family: var(--font-en); font-size: 13px; }
+.rv-finish-list-row .rv-due { margin-left: auto; font-size: 10.5px; color: var(--m-faint); white-space: nowrap; }
+
+/* ==========================================================================
+   6. 词库管理
+   ========================================================================== */
+.rv-manage { display: flex; flex-direction: column; gap: 14px; }
+.rv-manage-head { display: flex; align-items: center; gap: 14px; }
+.rv-manage-head-main { flex: 1; min-width: 0; }
+.rv-manage-head-main .m-title { font-size: clamp(22px, 2.2vw, 30px); margin-top: 2px; }
+.rv-manage-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.rv-filter {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 650;
+  color: var(--m-muted);
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: rgba(10, 14, 24, .84);
+  transition: .2s var(--m-ease);
+}
+.rv-filter em { font-style: normal; font-family: var(--font-en); font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: rgba(255, 255, 255, .08); color: var(--m-faint); }
+.rv-filter:hover { color: var(--m-text); border-color: rgba(255, 255, 255, .22); }
+.rv-filter.is-active { color: #061019; background: linear-gradient(135deg, #c9fff7, var(--m-teal) 55%, #a99bff 150%); border-color: transparent; box-shadow: 0 10px 26px -14px rgba(111, 242, 221, .9); }
+.rv-filter.is-active em { background: rgba(6, 16, 25, .16); color: #061019; }
+.rv-tools { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.rv-search { position: relative; flex: 1; min-width: 220px; }
+.rv-search .icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--m-faint); pointer-events: none; }
+.rv-search input {
+  width: 100%; height: 44px; padding: 0 14px 0 40px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: rgba(9, 12, 21, .92);
+  color: var(--m-text); font-size: 13px;
+  outline: none;
+  transition: border-color .2s;
+}
+.rv-search input::placeholder { color: var(--m-faint); }
+.rv-search input:focus { border-color: rgba(111, 242, 221, .5); box-shadow: 0 0 0 3px rgba(111, 242, 221, .1); }
+.rv-tools .btn { min-height: 44px; border-radius: 13px; font-size: 13px; }
+.rv-tools .btn.btn-ghost {
+  color: rgba(226, 233, 250, .92);
+  background: rgba(9, 12, 21, .86);
+  border-color: rgba(255, 255, 255, .18);
+}
+.rv-tools .btn.btn-ghost:hover { background: rgba(255, 255, 255, .1); }
+.rv-tools .btn .icon { width: 15px; height: 15px; }
+
+.rv-add {
+  border-radius: 20px;
+  border: 1px solid rgba(111, 242, 221, .22);
+  background:
+    radial-gradient(120% 130% at 0% 0%, rgba(111, 242, 221, .1), transparent 60%),
+    linear-gradient(158deg, rgba(13, 18, 31, .9), rgba(7, 10, 18, .74));
+  padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 12px;
+  animation: rv-slide-in .32s var(--m-ease);
+}
+@keyframes rv-slide-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.rv-add-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rv-add-title { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 720; }
+.rv-add-title .icon { width: 15px; height: 15px; color: var(--m-teal); }
+.rv-add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rv-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.rv-field label { font-size: 10.5px; color: var(--m-faint); letter-spacing: .04em; }
+.rv-field input, .rv-field textarea {
+  width: 100%; padding: 11px 12px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: rgba(9, 12, 21, .8);
+  color: var(--m-text); font-size: 13px;
+  outline: none; resize: vertical;
+  transition: border-color .2s;
+}
+.rv-field input:focus, .rv-field textarea:focus { border-color: rgba(111, 242, 221, .5); }
+.rv-field.full { grid-column: 1 / -1; }
+.rv-add-actions { display: flex; gap: 9px; justify-content: flex-end; flex-wrap: wrap; }
+.rv-add-actions .btn { min-height: 40px; padding: 0 20px; border-radius: 12px; font-size: 12.5px; }
+
+.rv-wordlist { display: flex; flex-direction: column; gap: 9px; min-height: 120px; }
+.rv-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px;
+  border-radius: 17px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  background: linear-gradient(158deg, rgba(11, 15, 26, .95), rgba(6, 9, 16, .9));
+  box-shadow: 0 16px 36px -28px rgba(0, 0, 0, .9);
+  transition: border-color .2s, background .2s;
+  animation: rv-row-in .3s var(--m-ease) both;
+}
+@keyframes rv-row-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rv-row:hover { border-color: rgba(255, 255, 255, .2); }
+.rv-row.is-pending { opacity: .5; pointer-events: none; }
+.rv-row-audio {
+  width: 40px; height: 40px; flex: none; border-radius: 13px;
+  display: grid; place-items: center;
+  color: var(--m-teal);
+  border: 1px solid rgba(111, 242, 221, .24);
+  background: rgba(111, 242, 221, .08);
+  transition: .18s var(--m-ease);
+}
+.rv-row-audio:hover { background: rgba(111, 242, 221, .18); transform: scale(1.04); }
+.rv-row-audio .icon { width: 18px; height: 18px; }
+.rv-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.rv-row-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.rv-row-top b { font-family: var(--font-en); font-size: 16.5px; font-weight: 750; letter-spacing: -.01em; word-break: break-word; }
+.rv-row-phonetic { font-family: var(--font-en); font-size: 11.5px; color: var(--m-teal); opacity: .85; }
+.rv-row-meaning { font-size: 12.5px; color: rgba(226, 233, 250, .9); line-height: 1.5; }
+.rv-row-example { font-family: var(--font-en); font-size: 11px; color: var(--m-faint); line-height: 1.5; }
+.rv-row-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+.rv-status { font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+.rv-status.new { color: #8fd8ff; border-color: rgba(143, 216, 255, .32); background: rgba(143, 216, 255, .1); }
+.rv-status.learning { color: var(--m-warm); border-color: rgba(255, 197, 122, .32); background: rgba(255, 197, 122, .1); }
+.rv-status.known { color: var(--m-ok); border-color: rgba(94, 234, 157, .3); background: rgba(94, 234, 157, .1); }
+.rv-src { font-size: 9.5px; color: rgba(196, 206, 232, .72); border: 1px solid rgba(148, 163, 196, .24); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.rv-due { font-size: 9.5px; color: rgba(196, 206, 232, .66); white-space: nowrap; }
+.rv-row-actions { display: flex; align-items: center; gap: 6px; flex: none; flex-wrap: wrap; justify-content: flex-end; max-width: 220px; }
+.rv-mini {
+  padding: 7px 11px; border-radius: 10px;
+  font-size: 11px; font-weight: 650; white-space: nowrap;
+  color: rgba(214, 224, 248, .84);
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: rgba(255, 255, 255, .05);
+  transition: .18s var(--m-ease);
+}
+.rv-mini:hover { color: var(--m-text); border-color: rgba(255, 255, 255, .26); }
+.rv-mini.primary { color: #061019; border-color: transparent; background: linear-gradient(135deg, #bffcf2, var(--m-teal) 60%); }
+.rv-mini.danger { color: #ffb4c0; border-color: rgba(255, 113, 136, .3); background: rgba(255, 113, 136, .08); }
+.rv-mini.danger.is-confirm { color: #fff; background: linear-gradient(135deg, #ff8fa3, #e11d48); border-color: transparent; animation: m-shake .35s; }
+.rv-mini.ghost { background: transparent; }
+.rv-list-more { text-align: center; font-size: 10.5px; color: var(--m-faint); padding: 6px 0; }
+
+/* ==========================================================================
+   7. 小游戏
+   ========================================================================== */
+.rv-game-view { display: flex; flex-direction: column; gap: 14px; max-width: 860px; margin: 0 auto; }
+.rv-game-view-head { display: flex; align-items: center; gap: 13px; }
+.rv-game-view-head .m-title { font-size: clamp(21px, 2.2vw, 28px); margin-top: 2px; }
+.rv-game-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.rv-game-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px;
+  font-size: 12px; font-weight: 650;
+  color: var(--m-muted);
+  border: 1px solid rgba(255, 255, 255, .12);
+  background: rgba(13, 18, 31, .66);
+  transition: .2s var(--m-ease);
+}
+.rv-game-tab .icon { width: 14px; height: 14px; }
+.rv-game-tab.is-active { color: #061019; border-color: transparent; background: linear-gradient(135deg, #c9fff7, var(--m-teal) 55%, #a99bff 150%); }
+.rv-game-host { display: flex; flex-direction: column; gap: 12px; }
+
+.rv-game-panel {
+  position: relative; overflow: hidden;
+  padding: 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(180, 156, 255, .12), transparent 60%),
+    linear-gradient(158deg, rgba(12, 16, 28, .94), rgba(7, 10, 18, .9));
+  box-shadow: 0 26px 60px -34px rgba(0, 0, 0, .95);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.rv-game-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rv-game-panel-title { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 750; }
+.rv-game-panel-title .icon { width: 17px; height: 17px; color: var(--m-teal); }
+.rv-game-panel-sub { font-size: 11px; color: var(--m-faint); margin-top: 3px; line-height: 1.55; }
+.rv-game-score { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-en); font-size: 14px; font-weight: 750; color: var(--m-warm); }
+.rv-game-score .icon { width: 15px; height: 15px; }
+.rv-game-notice {
+  padding: 9px 13px; border-radius: 11px;
+  font-size: 11.5px; line-height: 1.55;
+  color: #cfe6ff;
+  background: rgba(143, 216, 255, .08);
+  border: 1px solid rgba(143, 216, 255, .24);
+}
+.rv-game-panel .match-grid { gap: 9px; }
+.rv-game-panel .match-tile { min-height: 64px; font-size: 13.5px; }
+.rv-game-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.rv-game-msg { font-size: 11.5px; color: var(--m-muted); line-height: 1.5; }
+.rv-game-msg.ok { color: var(--m-ok); }
+.rv-game-msg.bad { color: #ffb4c0; }
+.rv-game-panel .btn { border-radius: 12px; }
+.rv-game-progress { display: flex; align-items: center; gap: 10px; }
+.rv-game-progress .rv-progress-bar { flex: 1; }
+.rv-game-progress span { font-family: var(--font-en); font-size: 11.5px; color: var(--m-muted); white-space: nowrap; }
+
+/* 听音选词 */
+.rv-listen { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 8px 0 4px; }
+.rv-listen-speak {
+  width: 96px; height: 96px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 0; color: #061019;
+  background: radial-gradient(120% 120% at 32% 22%, #e6fffa 0%, #9cf8ea 30%, var(--m-teal) 54%, #4cc3d9 84%, #7c6df2 150%);
+  box-shadow: 0 22px 48px -18px rgba(111, 242, 221, .85), inset 0 1px 0 rgba(255, 255, 255, .5);
+  transition: transform .18s var(--m-ease);
+}
+.rv-listen-speak:hover { transform: scale(1.04); }
+.rv-listen-speak:active { transform: scale(.96); }
+.rv-listen-speak .icon { width: 40px; height: 40px; }
+.rv-listen-hint { font-size: 11.5px; color: var(--m-faint); text-align: center; line-height: 1.6; }
+.rv-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.rv-option {
+  min-height: 56px; padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: rgba(148, 163, 196, .06);
+  color: var(--m-text);
+  font-family: var(--font-en); font-size: 15px; font-weight: 650;
+  letter-spacing: .01em;
+  display: grid; place-items: center; text-align: center;
+  transition: .18s var(--m-ease);
+  word-break: break-word;
+}
+.rv-option:hover { border-color: rgba(111, 242, 221, .4); background: rgba(111, 242, 221, .08); }
+.rv-option.is-right { border-color: rgba(94, 234, 157, .6); background: rgba(94, 234, 157, .14); color: #b8ffd8; }
+.rv-option.is-wrong { border-color: rgba(255, 113, 136, .6); background: rgba(255, 113, 136, .12); color: #ffd4da; animation: m-shake .3s; }
+.rv-option:disabled { cursor: default; }
+
+/* 拼写填空 */
+.rv-spell { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.rv-spell-prompt { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; }
+.rv-spell-meaning { font-size: clamp(19px, 2.2vw, 25px); font-weight: 750; }
+.rv-spell-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--m-muted); }
+.rv-spell-meta .rv-phonetic { font-size: 13px; }
+.rv-spell-blanks { font-family: var(--font-en); font-size: 24px; letter-spacing: .32em; color: var(--m-teal); text-align: center; margin: 4px 0; }
+.rv-spell-form { display: flex; gap: 9px; }
+.rv-spell-form input {
+  flex: 1; min-width: 0; height: 48px; padding: 0 16px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(9, 12, 21, .82);
+  color: var(--m-text); font-family: var(--font-en); font-size: 17px; letter-spacing: .02em;
+  outline: none;
+}
+.rv-spell-form input:focus { border-color: rgba(111, 242, 221, .55); box-shadow: 0 0 0 3px rgba(111, 242, 221, .1); }
+.rv-spell-form .btn { min-height: 48px; padding: 0 22px; border-radius: 13px; }
+.rv-spell-msg { text-align: center; font-size: 12.5px; min-height: 18px; color: var(--m-muted); }
+.rv-spell-msg.ok { color: var(--m-ok); }
+.rv-spell-msg.bad { color: #ffb4c0; }
+.rv-spell-reveal { text-align: center; font-family: var(--font-en); font-size: 15px; color: var(--m-warm); }
+
+/* ==========================================================================
+   8. 响应式
+   ========================================================================== */
+@media (max-width: 1100px) {
+  .rv-hero { grid-template-columns: 1fr; gap: 18px; padding: 22px 22px 24px; }
+  .rv-ring { display: none; }
+  .rv-recent { grid-template-columns: 1fr; }
+  .rv-row { flex-wrap: wrap; }
+  .rv-row-main { flex: 1 1 60%; }
+  .rv-row-actions { max-width: none; width: 100%; justify-content: flex-start; padding-left: 52px; }
+}
+
+@media (max-width: 620px) {
+  /* HUD 第 6 Tab：小屏改为等分列，6 项不横向溢出 */
+  .tabbar { left: 10px; right: 10px; width: auto; transform: none; gap: 2px; padding: 5px; justify-content: space-between; }
+  .tab, .tab-assistant {
+    width: auto; flex: 1 1 0; min-width: 0;
+    height: 50px; padding: 4px 2px;
+    flex-direction: column; gap: 2px;
+    font-size: 9.5px; letter-spacing: 0;
+    border-radius: 11px;
+  }
+  .tab-assistant { flex: 1 1 0; }
+  .tab .icon { width: 18px; height: 18px; }
+  .tab-assistant .tab-orb { width: 24px; height: 24px; margin: 0; border-radius: 8px; }
+  .tab-assistant .tab-orb .icon { width: 14px; height: 14px; }
+  .tab-key { display: none; }
+  .tab-due { top: 1px; right: 2px; min-width: 15px; height: 15px; font-size: 8.5px; padding: 0 4px; }
+
+  .rv-hero-count strong { font-size: 54px; }
+  .rv-hero-actions .btn { flex: 1 1 auto; min-height: 42px; padding: 0 16px; font-size: 13px; }
+  .rv-grades { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .rv-grade { padding: 11px 8px; }
+  .rv-card { height: clamp(286px, 46vh, 340px); }
+  .rv-face { padding: 22px 20px; }
+  .rv-face.back { padding: 20px 18px; }
+  .rv-card .rv-word { font-size: clamp(34px, 10vw, 46px); }
+  .rv-word.small { font-size: 23px; }
+  .rv-manage-head { flex-wrap: wrap; }
+  .rv-add-grid { grid-template-columns: 1fr; }
+  .rv-row { padding: 12px; }
+  .rv-row-actions { padding-left: 0; }
+  .rv-row-actions .rv-mini { flex: 1 1 auto; text-align: center; }
+  .rv-options { grid-template-columns: 1fr; }
+  .rv-listen-speak { width: 84px; height: 84px; }
+  .rv-listen-speak .icon { width: 34px; height: 34px; }
+  .rv-game-panel { padding: 15px; }
+  .rv-game-panel .match-tile { min-height: 58px; font-size: 12.5px; }
+  .rv-finish-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .rv-finish-stat strong { font-size: 24px; }
+  .rv-finish-actions .btn { flex: 1 1 auto; padding: 0 16px; font-size: 12.5px; }
+  .rv-tools .btn { flex: 1 1 auto; justify-content: center; }
+  .rv-session-top { gap: 10px; }
+  .rv-session-score { display: none; }
+}
+
+@media (max-width: 380px) {
+  .rv-hero-stats { gap: 6px 12px; font-size: 11px; }
+  .rv-hero-stats b { font-size: 13.5px; }
+  .tab { font-size: 9px; }
+  .tab-due { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-face.front::after, .rv-speak.is-playing, .rv-finish-orb { animation: none !important; }
+  .rv-card-inner { transition: none !important; }
+}
+
+
+/* v4.8 例句：朗读按钮 + 中文翻译 */
+.rv-example { padding-right: 56px; display: flex; align-items: flex-start; }
+.rv-example-bulb { position: absolute; left: 12px; top: 13px; width: 14px; height: 14px; color: var(--m-teal); opacity: .7; }
+.rv-example-bulb .icon { width: 14px; height: 14px; }
+.rv-example-en { min-width: 0; }
+.rv-example-speak {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border-radius: 10px;
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--m-teal);
+  background: rgba(111, 242, 221, .1);
+  border: 1px solid rgba(111, 242, 221, .24);
+  transition: .18s var(--m-ease);
+}
+.rv-example-speak:hover { background: rgba(111, 242, 221, .2); }
+.rv-example-speak .icon { position: static; width: 16px; height: 16px; color: currentColor; opacity: 1; }
+.rv-example-zh {
+  width: 100%; margin-top: 4px; padding-left: 34px;
+  font-size: 11.5px; line-height: 1.55; color: var(--m-muted);
+}
+.rv-example-zh[hidden] { display: none !important; }
+
+/* 词库列表例句 */
+.rv-row-example { display: flex; align-items: flex-start; gap: 6px; font-family: var(--font-en); font-size: 11px; color: var(--m-faint); line-height: 1.5; }
+.rv-row-example span { min-width: 0; }
+.rv-row-example-speak {
+  flex: none; width: 22px; height: 22px; border-radius: 7px;
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--m-teal); background: rgba(111, 242, 221, .08);
+  border: 1px solid rgba(111, 242, 221, .18);
+}
+.rv-row-example-speak .icon { width: 12px; height: 12px; }
+.rv-row-example-zh { margin: 2px 0 0 28px; font-size: 10.5px; line-height: 1.5; color: var(--m-faint); }
+.rv-row-example-zh[hidden] { display: none !important; }
+
+/* ==========================================================================
+   v4.9 复习会话页面重设计：去掉虚框 / 单词完整显示 / 例句图标居中
+   ========================================================================== */
+#screen-review .rv-session { max-width: 860px; gap: 18px; }
+
+/* 去掉点击卡片后浏览器默认的虚线聚焦框（这是截图里最外层虚框的来源） */
+.rv-card,
+.rv-card:focus,
+.rv-card:focus-visible,
+.rv-card-inner,
+.rv-card-inner:focus {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+.rv-empty { border-style: solid !important; }
+
+/* 卡片主体：更干净的玻璃面 */
+.rv-face {
+  padding: 34px 38px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background:
+    radial-gradient(120% 140% at 50% 0%, rgba(111, 242, 221, .12), transparent 58%),
+    radial-gradient(120% 150% at 100% 100%, rgba(180, 156, 255, .13), transparent 62%),
+    linear-gradient(158deg, rgba(16, 22, 38, .97), rgba(7, 10, 18, .94));
+  box-shadow: 0 38px 90px -44px rgba(0, 0, 0, .98), inset 0 1px 0 rgba(255, 255, 255, .07);
+}
+.rv-face.back { padding: 30px 34px; gap: 12px; }
+
+/* 正面：单词单独占一整行，喇叭放到单词下方，长单词自动换行，绝不遮挡 */
+.rv-word-row {
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.rv-word {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  font-size: clamp(34px, 4.6vw, 62px);
+  line-height: 1.08;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+.rv-word-row .rv-speak { width: 48px; height: 48px; }
+.rv-word-row .rv-speak .icon { width: 21px; height: 21px; }
+.rv-card-tip { text-align: center; }
+.rv-flip-btn { margin-top: 6px; }
+
+/* 背面：单词 + 喇叭可换行，长词不挤压 */
+.rv-back-word { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; width: 100%; }
+.rv-back-word .rv-word.small { max-width: calc(100% - 58px); overflow-wrap: anywhere; word-break: break-word; }
+
+/* 例句：灯泡图标 / 英文 / 朗读按钮三列垂直居中 */
+.rv-example {
+  display: grid !important;
+  grid-template-columns: 18px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 12px 12px 12px 14px !important;
+  padding-right: 12px !important;
+  border-radius: 14px;
+}
+.rv-example-bulb {
+  position: static !important;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 18px;
+  height: 18px;
+}
+.rv-example-bulb .icon { width: 15px; height: 15px; }
+.rv-example-en { line-height: 1.6; min-width: 0; }
+.rv-example-speak {
+  position: static !important;
+  transform: none !important;
+  align-self: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+.rv-example-zh { margin-top: 5px; padding-left: 41px; }
+
+/* ==========================================================================
+   v5.0 复习舞台重设计：去掉大黑卡/虚框/背后动效；单词区改为大号毛玻璃
+   ========================================================================== */
+#screen-review .rv-wrap.narrow { max-width: 1040px; }
+#screen-review .rv-session { max-width: 1040px; }
+
+/* 唯一的一层毛玻璃：直接作为单词舞台，不再有第二层深色卡片 */
+.rv-card {
+  height: clamp(400px, 54vh, 560px);
+  border: 0;
+  outline: none !important;
+  background: transparent;
+}
+.rv-card::before {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: 0;
+  border-radius: 32px;
+  border: 0;
+  background: rgba(9, 14, 24, .28);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  box-shadow: 0 34px 90px -46px rgba(0, 0, 0, .9);
+  pointer-events: none;
+}
+.rv-card-inner { z-index: 1; }
+.rv-face {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 40px 48px;
+  overflow: visible;
+}
+.rv-face.back {
+  background: transparent !important;
+  padding: 34px 44px;
+  overflow-y: auto;
+}
+/* 去掉背后所有动效 */
+.rv-face.front::after { content: none !important; animation: none !important; display: none !important; }
+.rv-speak.is-playing { animation: none !important; }
+.rv-card-inner { transition: transform .45s cubic-bezier(.22, 1, .36, 1); }
+
+/* 正常面：单词更大、可用宽度更大 */
+.rv-card-eyebrow { letter-spacing: .24em; }
+.rv-word-row { width: 100%; flex-direction: column; gap: 14px; }
+.rv-word {
+  width: 100%; max-width: 100%;
+  font-size: clamp(44px, 6vw, 88px);
+  line-height: 1.16;
+  letter-spacing: -.03em;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+.rv-word-row .rv-speak { width: 46px; height: 46px; }
+.rv-card-tip { margin-top: 2px; }
+.rv-flip-btn { margin-top: 8px; padding: 10px 24px; border-radius: 999px; background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .16); }
+
+/* 背面：不再套深色层，单词与喇叭更清楚 */
+.rv-face.back { gap: 12px; }
+.rv-back-word .rv-word.small { font-size: clamp(30px, 3.6vw, 44px); }
+.rv-phonetic { font-size: 15px; }
+.rv-meaning { font-size: clamp(22px, 2.6vw, 32px); }
+.rv-example {
+  background: rgba(255, 255, 255, .055) !important;
+  border: 1px solid rgba(255, 255, 255, .10) !important;
+  border-radius: 14px;
+  padding: 13px 14px !important;
+}
+.rv-example-zh { color: rgba(214, 226, 250, .72); font-size: 12px; }
+.rv-meta-row { margin-top: 4px; }
+
+/* ==========================================================================
+   v5.1 去除全局玻璃层：session/card 不再当大面板；只给「单词」一层毛玻璃
+   ========================================================================== */
+#screen-review .rv-session,
+#screen-review .rv-card,
+#screen-review .rv-session-progress {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+#screen-review .rv-session { border-radius: 0; }
+/* 去掉 v5.0 的整页薄雾层 */
+#screen-review .rv-card::before { display: none !important; content: none !important; }
+#screen-review .rv-card { height: clamp(420px, 54vh, 560px); }
+
+/* 正面：单词区域本身是一块毛玻璃 */
+#screen-review .rv-word-row {
+  width: min(100%, 900px);
+  margin: 0 auto;
+  padding: 30px 46px 26px;
+  border-radius: 38px;
+  border: 0;
+  background: rgba(255, 255, 255, .065);
+  backdrop-filter: blur(30px) saturate(160%);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  box-shadow: 0 30px 70px -34px rgba(0, 0, 0, .65), inset 0 1px 0 rgba(255, 255, 255, .14);
+}
+#screen-review .rv-word { text-shadow: 0 8px 40px rgba(111, 242, 221, .18); }
+
+/* 背面：单词区域同样毛玻璃，其他内容直接浮在页面上 */
+#screen-review .rv-back-word {
+  width: 100%;
+  padding: 18px 22px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, .06);
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: 0 24px 60px -36px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+#screen-review .rv-phonetic,
+#screen-review .rv-meaning,
+#screen-review .rv-meta-row,
+#screen-review .rv-example-zh { text-shadow: 0 1px 8px rgba(0, 0, 0, .35); }
+/* 评分按钮：毛玻璃，不要硬边框 */
+#screen-review .rv-grade {
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(255, 255, 255, .045);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* 清掉 glass.css 里 .rv-face / .rv-card-inner 的 !important 深色底（它是截图大暗层） */
+#screen-review .rv-card .rv-face,
+#screen-review .rv-card .rv-face.back,
+#screen-review .rv-card .rv-card-inner {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* v5.2：再放大单词舞台，长词更从容 */
+#screen-review .rv-word-row { width: min(100%, 960px); padding: 34px 52px 30px; border-radius: 42px; }
+#screen-review .rv-word { font-size: clamp(48px, 6.4vw, 96px); }
+@media (max-width: 900px) {
+  #screen-review .rv-word-row { width: 100%; padding: 24px 22px; border-radius: 28px; }
+  #screen-review .rv-word { font-size: clamp(34px, 9vw, 54px); }
+}
+
+/* ==========================================================================
+   v5.3 复习会话锁定单屏：不滚动、不拖动，所有内容按一屏排布
+   ========================================================================== */
+#screen-review:has(.rv-session) {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+#screen-review:has(.rv-session) .rv-wrap.narrow {
+  height: 100%;
+  display: flex;
+}
+#screen-review:has(.rv-session) .rv-session {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 16px;
+}
+#screen-review:has(.rv-session) .rv-card {
+  height: 100%;
+  min-height: 0;
+}
+#screen-review:has(.rv-session) .rv-card-inner,
+#screen-review:has(.rv-session) .rv-face { min-height: 0; }
+
+/* 高度不够时自动压缩内部留白，仍然一屏显示 */
+@media (max-height: 780px) {
+  #screen-review:has(.rv-session) .rv-session { gap: 11px; }
+  #screen-review .rv-face { padding: 24px 30px; }
+  #screen-review .rv-face.back { padding: 20px 26px; gap: 8px; }
+  #screen-review .rv-word-row { padding: 22px 30px 20px; }
+  #screen-review .rv-word { font-size: clamp(38px, 7vh, 72px); }
+  #screen-review .rv-example { padding: 9px 12px !important; }
+  #screen-review .rv-example-zh { margin-top: 2px; }
+  #screen-review .rv-grades { gap: 8px; }
+  #screen-review .rv-grade { padding: 10px 6px; }
+}
+
+/* ==========================================================================
+   v5.4 小游戏：三款游戏锁定单屏 + 听音选项中文 + 拼写提示/跳过
+   ========================================================================== */
+#screen-review:has(.rv-game-view) {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+#screen-review:has(.rv-game-view) .rv-wrap.narrow {
+  height: 100%;
+  display: flex;
+}
+#screen-review:has(.rv-game-view) .rv-game-view {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: 980px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
+}
+#screen-review:has(.rv-game-view) .rv-game-host {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#screen-review:has(.rv-game-view) .rv-game-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#screen-review:has(.rv-game-view) .rv-game-view-head { flex: none; }
+#screen-review:has(.rv-game-view) .rv-game-tabs { flex: none; }
+
+/* 听音选词：选项带中文；四宫格填满剩余高度 */
+#screen-review .rv-option { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.rv-option-en { font-family: var(--font-en); font-size: 15px; font-weight: 650; line-height: 1.3; }
+.rv-option-zh { font-family: var(--font); font-size: 10.5px; font-weight: 500; line-height: 1.3; color: rgba(214, 226, 250, .58); }
+.rv-option.is-right .rv-option-zh { color: rgba(184, 255, 216, .78); }
+.rv-option.is-wrong .rv-option-zh { color: rgba(255, 212, 218, .8); }
+#screen-review:has(.rv-game-view) .rv-listen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 0;
+}
+#screen-review:has(.rv-game-view) .rv-listen-speak { width: 84px; height: 84px; }
+#screen-review:has(.rv-game-view) .rv-listen-speak .icon { width: 34px; height: 34px; }
+#screen-review:has(.rv-game-view) .rv-options {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: 1fr 1fr;
+  grid-auto-rows: minmax(0, 1fr);
+}
+#screen-review:has(.rv-game-view) .rv-option { min-height: 0; padding: 10px 14px; }
+
+/* 拼写填空：填满剩余高度 */
+#screen-review:has(.rv-game-view) .rv-spell {
+  flex: 1;
+  min-height: 0;
+  justify-content: center;
+  gap: 11px;
+}
+.rv-spell-tools { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.rv-spell-tool {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 12px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600;
+  color: rgba(214, 226, 250, .8);
+  background: rgba(255, 255, 255, .055);
+  border: 1px solid rgba(255, 255, 255, .12);
+  transition: .18s var(--m-ease);
+}
+.rv-spell-tool:hover { color: var(--m-teal); border-color: rgba(111, 242, 221, .35); background: rgba(111, 242, 221, .08); }
+.rv-spell-tool .icon { width: 13px; height: 13px; }
+.rv-spell-tool:disabled { opacity: .4; pointer-events: none; }
+.rv-spell-form input { height: 46px; }
+.rv-spell-form .btn { min-height: 46px; }
+
+/* 词义配对：棋盘填满剩余高度，不滚动 */
+#screen-review:has(.rv-game-view) .match-grid {
+  flex: 1;
+  min-height: 0;
+  grid-auto-rows: minmax(0, 1fr);
+}
+#screen-review:has(.rv-game-view) .match-tile { min-height: 0; }
+
+/* 高度不够时紧凑化 */
+@media (max-height: 780px) {
+  #screen-review:has(.rv-game-view) .rv-game-view { gap: 9px; }
+  #screen-review:has(.rv-game-view) .rv-game-panel { padding: 15px; gap: 9px; }
+  #screen-review:has(.rv-game-view) .rv-listen-speak { width: 70px; height: 70px; }
+  #screen-review:has(.rv-game-view) .rv-listen-speak .icon { width: 28px; height: 28px; }
+  #screen-review .rv-game-panel .match-tile { min-height: 0; font-size: 12.5px; }
+  #screen-review .rv-spell-blanks { font-size: 20px; margin: 0; }
+  #screen-review .rv-spell-form input { height: 42px; }
+  #screen-review .rv-spell-form .btn { min-height: 42px; }
+  #screen-review .rv-spell-meaning { font-size: 20px; }
+}
+
+/* ==========================================================================
+   v5.5 我的词库 / 复习首页：去掉深色大背景框，统一改为毛玻璃选项
+   ========================================================================== */
+/* 「最近加入」不再有大底层 / 模糊框 */
+#screen-review .rv-recent {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0;
+}
+/* 大卡片：去掉深色底 + 硬边框，只留轻毛玻璃 */
+#screen-review .rv-hero,
+#screen-review .rv-entry,
+#screen-review .rv-game-card,
+#screen-review .rv-manage,
+#screen-review .rv-empty,
+#screen-review .rv-game-panel,
+#screen-review .rv-wordlist {
+  background: rgba(255, 255, 255, .045) !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1) !important;
+  backdrop-filter: blur(24px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+}
+#screen-review .rv-hero::after { display: none !important; content: none !important; }
+#screen-review .rv-manage { background: transparent !important; backdrop-filter: none !important; box-shadow: none !important; }
+
+/* 选项 / 行 / 最近加入单词：毛玻璃，无方框 */
+#screen-review .rv-recent-row,
+#screen-review .rv-row,
+#screen-review .rv-filter {
+  background: rgba(255, 255, 255, .06) !important;
+  background-image: none !important;
+  border: 1px solid transparent !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1) !important;
+  backdrop-filter: blur(20px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+}
+#screen-review .rv-recent-row:hover,
+#screen-review .rv-entry:hover,
+#screen-review .rv-game-card:hover,
+#screen-review .rv-row:hover,
+#screen-review .rv-filter:hover {
+  background: rgba(255, 255, 255, .095) !important;
+  border-color: transparent !important;
+  transform: translateY(-1px);
+}
+#screen-review .rv-entry { border-radius: 20px; }
+#screen-review .rv-row { border-radius: 16px; }
+/* 词库入口与最近加入文字在透明底上的可读性 */
+#screen-review .rv-entry,
+#screen-review .rv-recent-row,
+#screen-review .rv-row,
+#screen-review .rv-hero { text-shadow: 0 1px 6px rgba(0, 0, 0, .35); }
+#screen-review .rv-recent-skel { background: rgba(255, 255, 255, .05); border-color: transparent; }
+/* 选项卡激活态保留渐变，避免和毛玻璃冲突 */
+#screen-review .rv-filter.is-active { border-color: transparent !important; }
+
+/* ==========================================================================
+   v5.6 词库管理：去掉单词列表外层模糊大框，只保留每个单词选项的毛玻璃
+   ========================================================================== */
+#screen-review .rv-wordlist {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0;
+}
+#screen-review .rv-row {
+  background: rgba(255, 255, 255, .055) !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .09) !important;
+  backdrop-filter: blur(16px) saturate(145%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(145%) !important;
+}
+#screen-review .rv-row:hover { background: rgba(255, 255, 255, .085) !important; }
+
+/* ==========================================================================
+   v5.7 去掉词库/列表选项的背景模糊（只保留半透明毛玻璃质感，不产生模糊块）
+   ========================================================================== */
+#screen-review .rv-wordlist,
+#screen-review .rv-row,
+#screen-review .rv-recent-row,
+#screen-review .rv-entry,
+#screen-review .rv-game-card,
+#screen-review .rv-game-panel,
+#screen-review .rv-hero,
+#screen-review .rv-filter,
+#screen-review .rv-empty {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+#screen-review .rv-row,
+#screen-review .rv-recent-row,
+#screen-review .rv-entry,
+#screen-review .rv-game-card,
+#screen-review .rv-filter {
+  background: rgba(255, 255, 255, .055) !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1) !important;
+}
+#screen-review .rv-row:hover,
+#screen-review .rv-recent-row:hover,
+#screen-review .rv-entry:hover,
+#screen-review .rv-game-card:hover,
+#screen-review .rv-filter:hover {
+  background: rgba(255, 255, 255, .085) !important;
+}
+#screen-review .rv-hero,
+#screen-review .rv-game-panel,
+#screen-review .rv-empty { background: rgba(255, 255, 255, .04) !important; background-image: none !important; }
+
+/* v5.8 按最终需求：外层背景框去掉，仅保留每个选项自身的毛玻璃 */
+#screen-review .rv-row,
+#screen-review .rv-recent-row,
+#screen-review .rv-entry,
+#screen-review .rv-game-card,
+#screen-review .rv-filter {
+  backdrop-filter: blur(18px) saturate(145%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(145%) !important;
+}

@@ -1,0 +1,317 @@
+{
+  "elena": {
+    "layers": {
+      "fg": "./assets/characters/layers/elena-fg.webp",
+      "bg": "./assets/characters/layers/elena-bg.webp"
+    },
+    "mouth": {
+      "cx": 0.691,
+      "cy": 0.374,
+      "rx": 0.021,
+      "ry": 0.012
+    },
+    "eyes": [
+      {
+        "cx": 0.587,
+        "cy": 0.288,
+        "rx": 0.022,
+        "ry": 0.017
+      },
+      {
+        "cx": 0.686,
+        "cy": 0.252,
+        "rx": 0.021,
+        "ry": 0.017
+      }
+    ],
+    "focal": {
+      "x": 0.63,
+      "y": 0.3
+    },
+    "sway": 0.006,
+    "flows": [
+      {
+        "type": "hair",
+        "cx": 0.315,
+        "cy": 0.4,
+        "rx": 0.15,
+        "ry": 0.26,
+        "ampX": 5.6,
+        "ampY": 2.46,
+        "freq": 0.2,
+        "speed": 1.3,
+        "phase": 0.0
+      },
+      {
+        "type": "hair",
+        "cx": 0.36,
+        "cy": 0.68,
+        "rx": 0.16,
+        "ry": 0.16,
+        "ampX": 4.6,
+        "ampY": 2.99,
+        "freq": 0.17,
+        "speed": 1.0,
+        "phase": 1.7
+      },
+      {
+        "type": "hair",
+        "cx": 0.52,
+        "cy": 0.185,
+        "rx": 0.1,
+        "ry": 0.1,
+        "ampX": 2.6,
+        "ampY": 1.89,
+        "freq": 0.26,
+        "speed": 0.8,
+        "phase": 0.9
+      },
+      {
+        "type": "hair",
+        "cx": 0.735,
+        "cy": 0.42,
+        "rx": 0.11,
+        "ry": 0.24,
+        "ampX": 4.01,
+        "ampY": 2.36,
+        "freq": 0.19,
+        "speed": 1.2,
+        "phase": 2.4
+      },
+      {
+        "type": "cloth",
+        "cx": 0.66,
+        "cy": 0.83,
+        "rx": 0.17,
+        "ry": 0.13,
+        "ampX": 2.42,
+        "ampY": 1.54,
+        "freq": 0.12,
+        "speed": 0.6,
+        "phase": 0.5
+      },
+      {
+        "type": "cloth",
+        "cx": 0.55,
+        "cy": 0.62,
+        "rx": 0.12,
+        "ry": 0.1,
+        "ampX": 1.65,
+        "ampY": 1.1,
+        "freq": 0.1,
+        "speed": 0.5,
+        "phase": 2.0
+      }
+    ]
+  },
+  "maya": {
+    "layers": {
+      "fg": "./assets/characters/layers/maya-fg.webp",
+      "bg": "./assets/characters/layers/maya-bg.webp"
+    },
+    "mouth": {
+      "cx": 0.503,
+      "cy": 0.285,
+      "rx": 0.023,
+      "ry": 0.013
+    },
+    "eyes": [
+      {
+        "cx": 0.412,
+        "cy": 0.245,
+        "rx": 0.021,
+        "ry": 0.016
+      },
+      {
+        "cx": 0.489,
+        "cy": 0.178,
+        "rx": 0.02,
+        "ry": 0.016
+      }
+    ],
+    "focal": {
+      "x": 0.45,
+      "y": 0.22
+    },
+    "sway": 0.006,
+    "flows": [
+      {
+        "type": "hair",
+        "cx": 0.25,
+        "cy": 0.24,
+        "rx": 0.13,
+        "ry": 0.16,
+        "ampX": 5.04,
+        "ampY": 2.69,
+        "freq": 0.21,
+        "speed": 1.2,
+        "phase": 0.4
+      },
+      {
+        "type": "hair",
+        "cx": 0.235,
+        "cy": 0.42,
+        "rx": 0.11,
+        "ry": 0.12,
+        "ampX": 3.99,
+        "ampY": 2.51,
+        "freq": 0.18,
+        "speed": 1.0,
+        "phase": 1.9
+      },
+      {
+        "type": "hair",
+        "cx": 0.61,
+        "cy": 0.17,
+        "rx": 0.12,
+        "ry": 0.13,
+        "ampX": 3.42,
+        "ampY": 2.28,
+        "freq": 0.23,
+        "speed": 1.1,
+        "phase": 2.7
+      },
+      {
+        "type": "hair",
+        "cx": 0.78,
+        "cy": 0.3,
+        "rx": 0.1,
+        "ry": 0.18,
+        "ampX": 3.42,
+        "ampY": 2.05,
+        "freq": 0.16,
+        "speed": 0.9,
+        "phase": 0.8
+      },
+      {
+        "type": "cloth",
+        "cx": 0.55,
+        "cy": 0.86,
+        "rx": 0.19,
+        "ry": 0.12,
+        "ampX": 2.1,
+        "ampY": 1.26,
+        "freq": 0.11,
+        "speed": 0.6,
+        "phase": 1.2
+      },
+      {
+        "type": "cloth",
+        "cx": 0.28,
+        "cy": 0.62,
+        "rx": 0.12,
+        "ry": 0.12,
+        "ampX": 2.31,
+        "ampY": 1.47,
+        "freq": 0.13,
+        "speed": 0.7,
+        "phase": 2.2
+      }
+    ]
+  },
+  "hikari": {
+    "layers": {
+      "fg": "./assets/characters/layers/hikari-fg.webp",
+      "bg": "./assets/characters/layers/hikari-bg.webp"
+    },
+    "mouth": {
+      "cx": 0.742,
+      "cy": 0.366,
+      "rx": 0.021,
+      "ry": 0.013
+    },
+    "eyes": [
+      {
+        "cx": 0.629,
+        "cy": 0.283,
+        "rx": 0.021,
+        "ry": 0.016
+      },
+      {
+        "cx": 0.727,
+        "cy": 0.235,
+        "rx": 0.02,
+        "ry": 0.016
+      }
+    ],
+    "focal": {
+      "x": 0.67,
+      "y": 0.3
+    },
+    "sway": 0.006,
+    "flows": [
+      {
+        "type": "hair",
+        "cx": 0.47,
+        "cy": 0.27,
+        "rx": 0.15,
+        "ry": 0.18,
+        "ampX": 5.6,
+        "ampY": 2.69,
+        "freq": 0.2,
+        "speed": 1.3,
+        "phase": 0.2
+      },
+      {
+        "type": "hair",
+        "cx": 0.41,
+        "cy": 0.52,
+        "rx": 0.14,
+        "ry": 0.16,
+        "ampX": 4.79,
+        "ampY": 2.74,
+        "freq": 0.17,
+        "speed": 1.1,
+        "phase": 1.5
+      },
+      {
+        "type": "hair",
+        "cx": 0.57,
+        "cy": 0.12,
+        "rx": 0.12,
+        "ry": 0.1,
+        "ampX": 2.78,
+        "ampY": 1.86,
+        "freq": 0.24,
+        "speed": 0.8,
+        "phase": 2.9
+      },
+      {
+        "type": "hair",
+        "cx": 0.775,
+        "cy": 0.2,
+        "rx": 0.09,
+        "ry": 0.14,
+        "ampX": 3.19,
+        "ampY": 2.05,
+        "freq": 0.22,
+        "speed": 1.0,
+        "phase": 0.9
+      },
+      {
+        "type": "cloth",
+        "cx": 0.68,
+        "cy": 0.82,
+        "rx": 0.17,
+        "ry": 0.13,
+        "ampX": 2.1,
+        "ampY": 1.26,
+        "freq": 0.11,
+        "speed": 0.6,
+        "phase": 1.8
+      },
+      {
+        "type": "cloth",
+        "cx": 0.53,
+        "cy": 0.64,
+        "rx": 0.1,
+        "ry": 0.09,
+        "ampX": 1.47,
+        "ampY": 1.05,
+        "freq": 0.1,
+        "speed": 0.5,
+        "phase": 0.3
+      }
+    ]
+  }
+}

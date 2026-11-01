@@ -1,0 +1,27 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>Option A</title>
+<link rel="stylesheet" href="/design-preview/base.css">
+<style>
+.thread { position: absolute; left: 40px; bottom: 152px; width: min(560px, 43vw); display: flex; flex-direction: column; gap: 10px; z-index: 4; }
+.bubble { padding: 14px 17px; border-radius: 18px; }
+.bubble.ava { border-left: 2px solid #6ff2dd; }
+.bubble.me { align-self: flex-end; max-width: 82%; background: rgba(13,22,36,.52); border-right: 2px solid rgba(231,201,143,.8); }
+.b-en { font-size: 15.5px; line-height: 1.55; letter-spacing: .005em; }
+.b-zh { margin-top: 6px; font-size: 12px; line-height: 1.6; color: rgba(214,226,250,.7); }
+.b-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 9.5px; font-weight: 750; letter-spacing: .14em; color: rgba(111,242,221,.78); text-transform: uppercase; }
+.b-meta::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #6ff2dd; box-shadow: 0 0 8px #6ff2dd; }
+</style></head><body><div class="stage"><div class="bg"></div>
+<header class="topbar">
+  <div class="left"><div class="back glass"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></div>
+    <div class="who"><div class="name">Elena <em>伦敦 · 画廊策展人</em></div><div class="role">像朋友一样，随便聊点什么</div></div></div>
+  <div class="right"><span class="pill live"><i></i>LIVE</span><span class="pill glass signal"><i></i>实时语音 · 就绪</span><span class="pill glass chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M4 12a8 8 0 0 1 8-8 8 8 0 0 1 8 8 8 8 0 0 1-8 8"/><path d="M8 12a4 4 0 0 1 8 0 4 4 0 0 1-8 0"/></svg>设置</span></div>
+</header>
+<div class="thread">
+  <div class="bubble me glass"><div class="b-en">I went to a small gallery near my office today. The light inside was beautiful.</div><div class="b-zh">我今天去了办公室附近的一家小画廊，里面的光线很漂亮。</div></div>
+  <div class="bubble ava glass"><div class="b-meta">Elena · 正在说话</div><div class="b-en">That sounds like a lovely pause in your day. What was the most interesting piece you saw?</div><div class="b-zh">听起来像是一天里很美好的停顿。你看到最有意思的作品是什么？</div></div>
+</div>
+<div class="foot"><div class="hint">点一下麦克风开始说话</div><div class="dock glass">
+  <button class="iconbtn" aria-label="文字输入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg></button>
+  <button class="mic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+  <button class="hang" aria-label="挂断"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13.5c4-3.6 12-3.6 16 0"/><path d="M4 13.5 5.6 17M20 13.5 18.4 17"/><path d="M9 18.5h6"/></svg></button>
+</div></div>
+</div></body></html>

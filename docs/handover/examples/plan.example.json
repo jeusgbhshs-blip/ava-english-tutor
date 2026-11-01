@@ -1,0 +1,36 @@
+{
+  "active": {
+    "version": 3,
+    "id": "plan_example",
+    "teacherId": "elena",
+    "teacherName": "Elena",
+    "level": "A2",
+    "goalText": "咖啡店点单和旅行问路",
+    "title": "Elena 的专属英语计划",
+    "summary": "按你的场景安排 3 节课：先跟读，再场景练习，最后独立挑战。",
+    "stages": [
+      { "id": "stage_1", "title": "第一课", "emoji": "🌱", "focus": "先开口，跟读常用句", "lessonId": "lesson_1" },
+      { "id": "stage_2", "title": "第二课", "emoji": "🌿", "focus": "在场景里用出来", "lessonId": "lesson_2" },
+      { "id": "stage_3", "title": "第三课", "emoji": "🌳", "focus": "独立完成挑战", "lessonId": "lesson_3" }
+    ],
+    "lessons": {
+      "lesson_1": {
+        "id": "lesson_1", "title": "第 1 课 · 咖啡店点单", "topic": "coffee", "emoji": "☕", "level": "A2",
+        "objectives": ["能点一杯咖啡", "能回答尺寸/冷热"],
+        "phrases": [{ "en": "Can I get a medium latte, please?", "zh": "请给我一杯中杯拿铁。" }],
+        "steps": [
+          { "id": "repeat", "title": "跟读常用句", "desc": "她说一句，你重复一句，共 5 句。" },
+          { "id": "practice", "title": "场景练习", "desc": "在咖啡店场景里对话。" },
+          { "id": "challenge", "title": "完成挑战", "desc": "独立完成一次点单。" }
+        ],
+        "taskPrompt": "Order a coffee with a custom size and milk choice.",
+        "teacherIntro": "Let's practice ordering coffee. Repeat after me.",
+        "status": "ready", "error": "", "done": false, "doneAt": 0
+      }
+    },
+    "generating": false,
+    "createdAt": 0,
+    "updatedAt": 0
+  },
+  "updatedAt": 0
+}

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Ava app icon">
+  <title>Ava — App Icon</title>
+  <defs>
+    <linearGradient id="iBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#141a2e"/><stop offset="52%" stop-color="#0c1120"/><stop offset="100%" stop-color="#05070d"/>
+    </linearGradient>
+    <radialGradient id="iGlow" cx="50%" cy="46%" r="56%">
+      <stop offset="0%" stop-color="#2ee6ff" stop-opacity="0.30"/>
+      <stop offset="52%" stop-color="#7a5cff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#7a5cff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="iA" x1="0.1" y1="1" x2="0.9" y2="0">
+      <stop offset="0%" stop-color="#2ee6ff"/><stop offset="46%" stop-color="#4fa8ff"/><stop offset="100%" stop-color="#b46bff"/>
+    </linearGradient>
+    <linearGradient id="iA2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8ff6ff"/><stop offset="55%" stop-color="#7ab8ff"/><stop offset="100%" stop-color="#d7a8ff"/>
+    </linearGradient>
+    <linearGradient id="iRim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="42%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="iSpark" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="40%" stop-color="#8ff6ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#8ff6ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="iBlur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="iBlurS" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3"/></filter>
+    <clipPath id="iClip"><rect x="16" y="16" width="480" height="480" rx="112"/></clipPath>
+  </defs>
+  <g clip-path="url(#iClip)">
+    <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#iBg)"/>
+    <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#iGlow)"/>
+    <!-- 背景微光斑 -->
+    <g filter="url(#iBlur)">
+      <circle cx="140" cy="120" r="70" fill="#2ee6ff" opacity="0.16"/>
+      <circle cx="390" cy="400" r="90" fill="#b46bff" opacity="0.18"/>
+    </g>
+    <!-- 星芒 / 曲线轨道 -->
+    <path d="M96 352 C170 300 210 250 262 186" stroke="#38d6ff" stroke-width="3" fill="none" opacity="0.45" stroke-linecap="round"/>
+    <path d="M416 366 C366 322 330 276 300 216" stroke="#a86bff" stroke-width="3" fill="none" opacity="0.4" stroke-linecap="round"/>
+    <circle cx="404" cy="132" r="26" fill="url(#iSpark)"/>
+    <!-- Ava 标志：A 字形（渐变描边 + 内部光带） -->
+    <g transform="translate(0, 6)">
+      <path d="M256 116 L362 386 L306 386 L284 326 L228 326 L206 386 L150 386 Z"
+            fill="url(#iA)"/>
+      <path d="M256 116 L362 386 L306 386 L284 326 L228 326 L206 386 L150 386 Z"
+            fill="none" stroke="url(#iA2)" stroke-width="3" opacity="0.8"/>
+      <!-- A 的横梁 -->
+      <path d="M238 288 L274 288 L284 316 L228 316 Z" fill="#080c16" opacity="0.9"/>
+      <!-- 内部高光 -->
+      <path d="M256 138 L318 296 L286 296 L256 214 L226 296 L194 296 Z" fill="#eaffff" opacity="0.16"/>
+      <circle cx="256" cy="176" r="15" fill="#eaffff" opacity="0.85" filter="url(#iBlurS)"/>
+      <circle cx="256" cy="176" r="7" fill="#ffffff" opacity="0.95"/>
+    </g>
+    <!-- 底部弧光 -->
+    <path d="M16 400 C120 470 392 470 496 400 L496 496 L16 496 Z" fill="#2ee6ff" opacity="0.07"/>
+    <path d="M16 424 C120 486 392 486 496 424" stroke="#4fd6ff" stroke-width="2" fill="none" opacity="0.25"/>
+    <!-- 圆角内缘高光 -->
+    <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="url(#iRim)" stroke-width="4"/>
+    <rect x="18" y="18" width="476" height="476" rx="110" fill="none" stroke="#000" stroke-width="2" opacity="0.35"/>
+  </g>
+</svg>

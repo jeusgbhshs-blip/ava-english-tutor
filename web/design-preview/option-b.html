@@ -1,0 +1,34 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>Option B</title>
+<link rel="stylesheet" href="/design-preview/base.css">
+<style>
+.panel { position: absolute; left: 28px; top: 96px; bottom: 120px; width: 348px; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 12px; z-index: 4; }
+.panel .head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.panel .head b { font-size: 13px; letter-spacing: .02em; }
+.panel .head span { font-size: 10px; color: rgba(214,226,250,.55); }
+.messages { flex: 1; display: flex; flex-direction: column; gap: 12px; overflow: hidden; justify-content: flex-end; }
+.msg { display: flex; flex-direction: column; gap: 5px; }
+.msg.user { align-items: flex-end; }
+.msg .meta { font-size: 9px; font-weight: 750; letter-spacing: .12em; color: rgba(214,226,250,.45); text-transform: uppercase; }
+.msg .body { padding: 12px 14px; border-radius: 16px; font-size: 13px; line-height: 1.55; background: rgba(15,22,38,.5); border: 1px solid rgba(255,255,255,.1); }
+.msg.user .body { background: rgba(111,242,221,.13); border-color: rgba(111,242,221,.24); border-bottom-right-radius: 6px; }
+.msg.ava .body { border-bottom-left-radius: 6px; }
+.msg .zh { font-size: 11px; line-height: 1.5; color: rgba(214,226,250,.58); padding: 0 3px; }
+.panel .composer { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 14px; background: rgba(6,9,16,.5); border: 1px solid rgba(255,255,255,.12); font-size: 12px; color: rgba(214,226,250,.42); }
+.foot { position: absolute; left: 0; right: 0; bottom: 22px; }
+.side-mic { position: absolute; right: 46px; bottom: 132px; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 5; }
+</style></head><body><div class="stage"><div class="bg"></div>
+<header class="topbar">
+  <div class="left"><div class="back glass"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></div>
+    <div class="who"><div class="name">Elena <em>伦敦 · 画廊策展人</em></div><div class="role">实时对话 · 中英字幕</div></div></div>
+  <div class="right"><span class="pill live"><i></i>LIVE</span><span class="pill glass signal"><i></i>实时语音 · 就绪</span></div>
+</header>
+<aside class="panel glass">
+  <div class="head"><b>对话记录</b><span>今天 14:32</span></div>
+  <div class="messages">
+    <div class="msg ava"><span class="meta">Elena</span><div class="body">Come in — the exhibition just opened. What kind of art do you like?</div><div class="zh">进来吧，展览刚开幕——你喜欢什么样的艺术？</div></div>
+    <div class="msg user"><span class="meta">你</span><div class="body">I went to a small gallery near my office today. The light inside was beautiful.</div><div class="zh">我今天去了办公室附近的一家小画廊，里面的光线很漂亮。</div></div>
+    <div class="msg ava"><span class="meta">Elena</span><div class="body">That sounds like a lovely pause in your day. What was the most interesting piece you saw?</div><div class="zh">听起来像是一天里很美好的停顿。你看到最有意思的作品是什么？</div></div>
+  </div>
+  <div class="composer">告诉 Elena 你想说什么…</div>
+</aside>
+<div class="side-mic"><div class="mic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div><div class="hint">点一下说话</div><button class="hang" aria-label="挂断"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13.5c4-3.6 12-3.6 16 0"/><path d="M4 13.5 5.6 17M20 13.5 18.4 17"/><path d="M9 18.5h6"/></svg></button></div></div></body></html>

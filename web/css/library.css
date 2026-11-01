@@ -1,0 +1,63 @@
+/* ==========================================================================
+   英语书库 · 6 本公版经典 · 每天 10 分钟
+   与知识库面板同风格：深色、低对比边框、少量青色强调
+   ========================================================================== */
+
+.kb-library { padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, .028); border: 1px solid rgba(255, 255, 255, .075); }
+.kb-library .kb-block-head { margin-bottom: 8px; }
+.lib-daily { border-radius: 12px; border: 1px solid rgba(111, 242, 221, .2); background: linear-gradient(145deg, rgba(111, 242, 221, .075), rgba(180, 156, 255, .045)); padding: 10px 11px; }
+.lib-daily.is-done { border-color: rgba(111, 242, 221, .36); background: linear-gradient(145deg, rgba(111, 242, 221, .12), rgba(180, 156, 255, .05)); }
+.lib-daily-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.lib-kicker { font-size: 9.5px; font-weight: 700; letter-spacing: .14em; color: #7cf5df; }
+.lib-streak { font-size: 9.5px; color: rgba(255, 255, 255, .56); }
+.lib-daily-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lib-daily-emoji { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 10px; font-size: 17px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .09); }
+.lib-daily-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lib-daily-copy strong { font-size: 12px; color: #f4f8ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-daily-copy span { font-size: 9.5px; color: rgba(255, 255, 255, .5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-daily-dots { margin-left: auto; display: flex; gap: 3px; flex: none; }
+.lib-daily-dots i, .lib-dots i { width: 5px; height: 5px; border-radius: 99px; background: rgba(255, 255, 255, .16); display: block; }
+.lib-daily-dots i.is-done, .lib-dots i.is-done { background: #6ff2dd; }
+.lib-daily-dots i.is-active, .lib-dots i.is-active { background: rgba(111, 242, 221, .55); box-shadow: 0 0 0 2px rgba(111, 242, 221, .12); }
+.lib-daily-focus { margin: 7px 0 8px; font-size: 9.5px; color: rgba(111, 242, 221, .66); font-family: var(--font-en, inherit); }
+.lib-daily-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.lib-daily-actions .btn { padding: 5px 9px; font-size: 10px; }
+
+/* 书库弹层 */
+.library-sheet { display: flex; flex-direction: column; gap: 12px; }
+.lib-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.lib-summary > div { border-radius: 12px; padding: 10px 12px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .08); display: flex; flex-direction: column; gap: 1px; }
+.lib-summary strong { font-size: 19px; color: #f4f8ff; font-weight: 700; line-height: 1.1; }
+.lib-summary span { font-size: 9.5px; color: rgba(255, 255, 255, .48); }
+.lib-flow { display: flex; flex-wrap: wrap; gap: 6px; }
+.lib-flow span { font-size: 9.5px; color: rgba(255, 255, 255, .62); border: 1px solid rgba(111, 242, 221, .16); background: rgba(111, 242, 221, .055); border-radius: 99px; padding: 5px 9px; }
+.lib-shelf-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 2px; }
+.lib-shelf-title strong { font-size: 12.5px; color: #f4f8ff; }
+.lib-shelf-title span { font-size: 9.5px; color: rgba(255, 255, 255, .42); }
+.lib-books { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.lib-book { padding: 9px 10px; border-radius: 13px; border: 1px solid rgba(255, 255, 255, .085); background: rgba(255, 255, 255, .032); display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.lib-book.is-current { border-color: rgba(111, 242, 221, .3); background: linear-gradient(150deg, rgba(111, 242, 221, .09), rgba(180, 156, 255, .035)); }
+.lib-book-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.lib-book-level { font-size: 8.5px; letter-spacing: .1em; color: #7cf5df; border: 1px solid rgba(111, 242, 221, .22); border-radius: 99px; padding: 2px 6px; }
+.lib-book-progress { font-size: 8.5px; color: rgba(255, 255, 255, .42); }
+.lib-book h3 { margin: 1px 0 0; font-family: var(--font-en, inherit); font-size: 12px; color: #f4f8ff; line-height: 1.25; }
+.lib-book-zh { margin: 0; font-size: 9.5px; color: rgba(255, 255, 255, .53); }
+.lib-book-intro { margin: 2px 0 3px; font-size: 9px; line-height: 1.5; color: rgba(255, 255, 255, .4); min-height: 27px; }
+.lib-dots { display: flex; gap: 4px; padding: 2px 0; }
+.lib-book-actions { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
+.lib-book-actions .btn { padding: 5px 9px; font-size: 9.5px; }
+.lib-book-note { font-size: 8.5px; color: rgba(255, 255, 255, .38); }
+.lib-foot { margin: 0; font-size: 9.5px; line-height: 1.6; color: rgba(255, 255, 255, .38); }
+.lib-book .btn[disabled] { opacity: .62; }
+
+@media (max-width: 900px) {
+  .lib-books { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 620px) {
+  .lib-books { grid-template-columns: 1fr; }
+  .kb-library { padding: 10px; }
+}
+
+.kb-entry-orb-book { font-size: 18px; background: rgba(180, 156, 255, .12); }
+
+.kb-entry + .kb-entry-library { margin-top: 8px; }

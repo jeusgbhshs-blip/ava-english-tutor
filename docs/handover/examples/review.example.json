@@ -1,0 +1,22 @@
+{
+  "words": {
+    "gallery": {
+      "word": "gallery",
+      "phonetic": "/ˈɡæləri/",
+      "meaning": "画廊",
+      "example": "I visited a small gallery yesterday.",
+      "source": "book",
+      "sourceTitle": "快乐王子 · Day 1",
+      "status": "new",
+      "interval": 0,
+      "ease": 2.5,
+      "due": 1790000000000,
+      "reps": 0,
+      "lapses": 0,
+      "createdAt": 1790000000000,
+      "updatedAt": 1790000000000,
+      "lastGrade": ""
+    }
+  },
+  "updatedAt": 1790000000000
+}

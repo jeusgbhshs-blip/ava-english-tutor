@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "currentBookIndex": 0,
+  "books": {
+    "happyprince": { "cursor": 1, "completedDays": [0] },
+    "magi": { "cursor": 0, "completedDays": [] },
+    "alice": { "cursor": 0, "completedDays": [] },
+    "odyssey": { "cursor": 0, "completedDays": [] },
+    "carol": { "cursor": 0, "completedDays": [] },
+    "gatsby": { "cursor": 0, "completedDays": [] }
+  },
+  "today": {
+    "date": "2026-11-01",
+    "bookId": "happyprince",
+    "dayIndex": 0,
+    "started": true,
+    "completed": true,
+    "docId": "kb_example",
+    "createdAt": 1790000000000
+  },
+  "lastStudyDate": "2026-11-01",
+  "streak": 1,
+  "totalMinutes": 10,
+  "totalCompleted": 1
+}

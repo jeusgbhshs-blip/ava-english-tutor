@@ -1,0 +1,747 @@
+/* ==========================================================================
+   Ava v3.3 · 全站毛玻璃覆盖层（最后加载）
+   目标：更明显的半透明玻璃、提高透明度、增加环境光层次；不改布局尺寸/人物。
+   原则：只覆盖主要容器/卡片/气泡/输入条/面板/弹层/tabbar 的外观层；
+        列表行/小芯片减少 backdrop-filter 数量，保证 430 性能。
+   ========================================================================== */
+
+:root {
+  --m-panel: rgba(16, 22, 38, .38);
+  --m-panel-solid: #121728;
+  --m-stroke: rgba(255, 255, 255, .14);
+  --m-stroke-strong: rgba(255, 255, 255, .22);
+  --gl-bg: rgba(16, 22, 38, .40);
+  --gl-bg-strong: rgba(16, 22, 38, .48);
+  --gl-bg-soft: rgba(16, 22, 38, .30);
+  --gl-border: rgba(255, 255, 255, .17);
+  --gl-highlight: rgba(255, 255, 255, .13);
+  --gl-blur: 24px;
+  --gl-saturate: 150%;
+  --gl-shadow: 0 24px 64px -34px rgba(0, 0, 0, .88);
+  --gl-inset: inset 0 1px 0 rgba(255, 255, 255, .14), inset 0 0 0 1px rgba(255, 255, 255, .05);
+  --gl-fill: linear-gradient(152deg, rgba(255, 255, 255, .105) 0%, rgba(255, 255, 255, .045) 34%, rgba(255, 255, 255, .012) 64%, rgba(255, 255, 255, 0) 100%);
+  --glass-shadow-soft: 0 18px 48px -30px rgba(0, 0, 0, .8);
+}
+
+/* ---------- 页面底部环境光斑：让透明玻璃后的背景更有层次 ---------- */
+.world::after {
+  content: "";
+  position: absolute; inset: -8%;
+  z-index: 3; pointer-events: none;
+  background:
+    radial-gradient(42% 34% at 16% 18%, rgba(111, 242, 221, .20), transparent 66%),
+    radial-gradient(36% 32% at 84% 14%, rgba(180, 156, 255, .22), transparent 68%),
+    radial-gradient(34% 30% at 66% 82%, rgba(255, 143, 163, .13), transparent 70%),
+    radial-gradient(28% 26% at 10% 84%, rgba(94, 234, 157, .13), transparent 72%);
+  filter: saturate(135%);
+  opacity: .9;
+}
+
+/* ---------- 主要玻璃容器 / 卡片 / 面板 ---------- */
+.hero-card,
+.stage-card,
+.lesson-card,
+.quick-card,
+.empty-card,
+.upcoming-card,
+.kb-entry,
+.interest-card,
+.profile-card,
+.list-card,
+.sub-card,
+.stat,
+.rv-hero,
+.rv-manage,
+.rv-session,
+.rv-finish,
+.rv-recent,
+.rv-empty,
+.rv-game-panel,
+.rv-card,
+.rv-wordlist,
+.kb-panel,
+.kb-card,
+.kb-select-card,
+.kb-main,
+.kb-side,
+.call-lesson,
+.call-docs,
+.mic-dock,
+.call-ptt,
+.call-dialogue,
+.assistant-inputbar,
+#screen-assistant .chat-thread {
+  background: var(--gl-fill), var(--gl-bg) !important;
+  border-color: var(--gl-border) !important;
+  box-shadow: var(--gl-shadow), var(--gl-inset) !important;
+  backdrop-filter: blur(var(--gl-blur)) saturate(var(--gl-saturate));
+  -webkit-backdrop-filter: blur(var(--gl-blur)) saturate(var(--gl-saturate));
+}
+
+/* 少量装饰性保留：本课面板/资料窗/PTT 的柔和主题色渐变 */
+.call-lesson {
+  background:
+    radial-gradient(120% 90% at 0 0, rgba(111, 242, 221, .13), transparent 58%),
+    var(--gl-fill),
+    var(--gl-bg) !important;
+}
+.call-docs {
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(111, 242, 221, .10), transparent 60%),
+    var(--gl-fill),
+    var(--gl-bg) !important;
+}
+.call-ptt {
+  border-color: rgba(255, 113, 136, .40) !important;
+  box-shadow: var(--gl-shadow), inset 0 1px 0 rgba(255, 255, 255, .16) !important;
+}
+.mic-dock { background: var(--gl-fill), rgba(16, 22, 38, .42) !important; }
+.call-dialogue { background: var(--gl-fill), rgba(16, 22, 38, .42) !important; }
+
+/* ---------- 聊天气泡 / 引用卡片 / 对话内容 ---------- */
+.msg-bubble,
+.bubble-body {
+  background: var(--gl-fill), rgba(16, 22, 38, .36) !important;
+  border-color: var(--gl-border) !important;
+  box-shadow: 0 16px 42px -26px rgba(0, 0, 0, .82), inset 0 1px 0 rgba(255, 255, 255, .12) !important;
+  backdrop-filter: blur(20px) saturate(var(--gl-saturate));
+  -webkit-backdrop-filter: blur(20px) saturate(var(--gl-saturate));
+}
+.msg.user .msg-bubble {
+  background:
+    linear-gradient(145deg, rgba(111, 242, 221, .20), rgba(180, 156, 255, .17)),
+    rgba(16, 22, 38, .30) !important;
+  border-color: rgba(111, 242, 221, .26) !important;
+}
+.citation-card,
+.call-citations .citation-card {
+  background: var(--gl-fill), rgba(16, 22, 38, .38) !important;
+  border-color: var(--gl-border) !important;
+  box-shadow: 0 16px 40px -26px rgba(0, 0, 0, .8), inset 0 1px 0 rgba(255, 255, 255, .12) !important;
+  backdrop-filter: blur(18px) saturate(148%);
+  -webkit-backdrop-filter: blur(18px) saturate(148%);
+}
+
+/* ---------- 输入条 / 弹层 / toast / tabbar ---------- */
+.assistant-inputbar,
+.call-textform {
+  background: var(--gl-fill), rgba(16, 22, 38, .46) !important;
+  border-color: var(--gl-border) !important;
+  box-shadow: 0 20px 54px -30px rgba(0, 0, 0, .86), inset 0 1px 0 rgba(255, 255, 255, .14) !important;
+  backdrop-filter: blur(26px) saturate(155%);
+  -webkit-backdrop-filter: blur(26px) saturate(155%);
+}
+
+.sheet {
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(111, 242, 221, .09), transparent 62%),
+    var(--gl-fill),
+    rgba(16, 22, 38, .52) !important;
+  border-color: rgba(255, 255, 255, .19) !important;
+  box-shadow: 0 -30px 90px -36px rgba(0, 0, 0, .92), inset 0 1px 0 rgba(255, 255, 255, .16) !important;
+  backdrop-filter: blur(28px) saturate(158%);
+  -webkit-backdrop-filter: blur(28px) saturate(158%);
+}
+.sheet-backdrop {
+  background: rgba(4, 6, 12, .38) !important;
+  backdrop-filter: blur(10px) saturate(130%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(130%) !important;
+}
+.toast {
+  background: var(--gl-fill), rgba(18, 26, 44, .46) !important;
+  border-color: rgba(255, 255, 255, .18) !important;
+  box-shadow: 0 16px 44px -24px rgba(0, 0, 0, .82), inset 0 1px 0 rgba(255, 255, 255, .14) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+.tabbar,
+#tabbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(16, 22, 38, .34) 38%, rgba(10, 14, 24, .50) 100%) !important;
+  border-color: rgba(255, 255, 255, .16) !important;
+  box-shadow: 0 24px 70px -32px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .14) !important;
+  backdrop-filter: blur(26px) saturate(160%);
+  -webkit-backdrop-filter: blur(26px) saturate(160%);
+}
+.tab {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+.tab.is-active {
+  background: rgba(255, 255, 255, .09) !important;
+  border-color: rgba(255, 255, 255, .16) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14) !important;
+}
+
+/* ---------- 小芯片 / 图标按钮：半透明但不堆 blur ---------- */
+.a-chip,
+.rv-chip,
+.rv-filter,
+.rv-game-tab,
+.kb-docs-btn,
+.kb-mode-chip,
+.cl-btn,
+.mic-btn,
+.ptt-btn,
+.rv-iconbtn,
+.call-icon-btn:not(.is-on),
+.call-action-btn {
+  background: rgba(255, 255, 255, .06) !important;
+  border-color: rgba(255, 255, 255, .15) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10) !important;
+  backdrop-filter: blur(12px) saturate(145%);
+  -webkit-backdrop-filter: blur(12px) saturate(145%);
+}
+.a-chip:hover,
+.rv-chip:hover,
+.rv-iconbtn:hover,
+.kb-docs-btn:hover,
+.cl-btn:hover {
+  background: rgba(255, 255, 255, .11) !important;
+}
+
+/* ---------- 列表行 / 段落块 / 知识库内容：更透但无 blur ---------- */
+.rv-row,
+.rv-entry,
+.rv-recent-row,
+.rv-game-card,
+.rv-finish-stat,
+.list-row,
+.kb-item,
+.kb-preview,
+.docs-chunk,
+.docs-doc-meta,
+.cl-phrase,
+.rv-empty-actions,
+.summary-actions {
+  background: rgba(255, 255, 255, .045) !important;
+  border-color: rgba(255, 255, 255, .10) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06) !important;
+}
+.rv-card {
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+.rv-card-inner,
+.rv-face {
+  background: rgba(18, 24, 40, .34) !important;
+  border-color: rgba(255, 255, 255, .14) !important;
+}
+.rv-flip-btn,
+.rv-grade,
+.rv-speak,
+.rv-row-audio,
+.rv-listen {
+  background: rgba(255, 255, 255, .055) !important;
+  border-color: rgba(255, 255, 255, .13) !important;
+}
+
+/* ---------- 通话页麦克风：只加玻璃外圈，不改变人物/按钮内的色彩身份 ---------- */
+.call-talk {
+  box-shadow:
+    0 0 0 8px rgba(255, 255, 255, .055),
+    0 0 0 1px rgba(255, 255, 255, .16),
+    0 26px 64px -26px rgba(0, 0, 0, .9) !important;
+}
+.call-icon-btn:not(.is-on),
+.call-action-btn { color: #eef4ff; }
+.call-docs,
+.call-lesson,
+.call-dialogue,
+.bubble-body,
+.call-ptt,
+.mic-dock { text-shadow: 0 1px 2px rgba(0, 0, 0, .30); }
+
+/* ---------- 进度条：玻璃内槽 ---------- */
+.progress-track,
+.rv-progress-bar,
+.rv-session-progress,
+.rv-game-progress {
+  background: rgba(255, 255, 255, .08) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .06) !important;
+}
+.hero-progress .progress-track,
+.stage-progress .progress-track { overflow: hidden; }
+
+/* ---------- 透明度可读性辅助 ---------- */
+.hero-card .hero-title,
+.lesson-card .lesson-title,
+.stage-card .stage-title,
+.assistant-hero .assistant-title { text-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
+.assistant-inputbar .input,
+.call-textform .input,
+#interest-input,
+.level-select,
+.rv-search,
+.rv-field .input,
+.rv-input { background-color: transparent !important; }
+
+/* ---------- 430 / 移动端：控制 blur 数量与强度 ---------- */
+@media (max-width: 1100px) {
+  .hero-card,
+  .stage-card,
+  .lesson-card,
+  .quick-card,
+  .empty-card,
+  .kb-entry,
+  .interest-card,
+  .profile-card,
+  .list-card,
+  .sub-card,
+  .rv-hero,
+  .rv-manage,
+  .rv-session,
+  .rv-finish,
+  .rv-game-panel,
+  .kb-panel,
+  .kb-card,
+  .call-lesson,
+  .call-docs,
+  .sheet {
+    backdrop-filter: blur(20px) saturate(148%);
+    -webkit-backdrop-filter: blur(20px) saturate(148%);
+  }
+  .rv-row,
+  .rv-entry,
+  .rv-recent-row,
+  .rv-game-card,
+  .rv-finish-stat,
+  .list-row,
+  .kb-item,
+  .docs-chunk,
+  .cl-phrase { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+@media (max-width: 430px) {
+  .hero-card,
+  .stage-card,
+  .lesson-card,
+  .quick-card,
+  .kb-entry,
+  .interest-card,
+  .profile-card,
+  .list-card,
+  .sub-card,
+  .rv-hero,
+  .rv-manage,
+  .rv-session,
+  .rv-finish,
+  .rv-game-panel,
+  .kb-panel,
+  .kb-card,
+  .call-lesson,
+  .call-docs {
+    backdrop-filter: blur(16px) saturate(145%);
+    -webkit-backdrop-filter: blur(16px) saturate(145%);
+  }
+  .msg-bubble,
+  .bubble-body,
+  .citation-card,
+  .toast { backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); }
+  .tabbar,
+  #tabbar { backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); }
+}
+
+/* 尊重“减少透明效果”系统偏好（不改变布局） */
+@media (prefers-reduced-transparency: reduce) {
+  .hero-card, .stage-card, .lesson-card, .quick-card, .empty-card,
+  .assistant-inputbar, .msg-bubble, .bubble-body, .sheet, .toast,
+  .tabbar, #tabbar, .call-lesson, .call-docs, .call-dialogue,
+  .mic-dock, .call-ptt, .citation-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(14, 20, 34, .86) !important;
+  }
+}
+
+/* ---------- v3.3 可读性微调：内容型页面加一层柔和暗色底，避免亮背景影响文字 ---------- */
+#screen-review,
+#screen-profile,
+#screen-courses,
+#screen-assistant {
+  background:
+    linear-gradient(90deg, rgba(5, 7, 13, .70) 0%, rgba(5, 7, 13, .42) 44%, rgba(5, 7, 13, .58) 100%) !important;
+}
+.rv-hero,
+.rv-game-card,
+.rv-row,
+.rv-entry,
+.rv-recent-row,
+.rv-finish-stat,
+.rv-wordlist,
+.profile-card,
+.list-card,
+.kb-entry,
+.interest-card,
+.sub-card,
+.stat,
+.stage-card,
+.lesson-card,
+.hero-card {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .34);
+}
+.rv-game-card,
+.rv-row,
+.rv-entry,
+.rv-recent-row,
+.rv-finish-stat {
+  background: rgba(255, 255, 255, .075) !important;
+  border-color: rgba(255, 255, 255, .13) !important;
+}
+.rv-game-card .rv-game-title,
+.rv-row .rv-word,
+.rv-entry .rv-entry-copy strong { color: #ffffff; }
+
+/* v3.3 修复：未加样式的原生按钮（如课程页「全部角色」）默认是白色方块，统一成毛玻璃胶囊 */
+button.section-more {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: linear-gradient(160deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .035));
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 8px 20px -16px rgba(0, 0, 0, .9);
+  color: var(--m-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  transition: color .18s, background .18s, border-color .18s, transform .18s;
+}
+button.section-more:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, .26);
+  background: linear-gradient(160deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .06));
+}
+button.section-more:active { transform: scale(.96); }
+
+
+/* v3.4 修复：助手左侧快捷选项外层不要再套一个玻璃框，只保留每个横条自己的玻璃 */
+#screen-assistant .assistant-chips {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+}
+
+/* v3.4 修复：去掉页面切入动画（transform/opacity 会让子元素 backdrop-filter 的采样结果变化，
+   表现为切 Tab 时毛玻璃忽明忽暗/效果不一致） */
+.screen.is-active { animation: none !important; }
+
+/* v3.4 修复：背景人物图不再做 9 秒缓慢放大/淡入，避免刷新后毛玻璃背后的底图持续变化，
+   让切入/切出 Tab 时玻璃观感稳定（角色切换仍有 .35s 淡入淡出） */
+.world-img {
+  transition: opacity .35s ease !important;
+  transform: scale(1.02) !important;
+}
+.world-img.is-on {
+  transform: scale(1.02) !important;
+}
+
+/* ==========================================================================
+   v3.4 知识库重新设计：取消 KB 区域的玻璃/模糊/阴影叠层（后加载覆盖）
+   ========================================================================== */
+#kb-screen,
+#kb-screen .kb-panel,
+#kb-screen .kb-block,
+#kb-screen .kb-drop,
+#kb-screen .kb-main,
+#kb-screen .kb-item,
+#kb-screen .kb-discuss,
+#kb-screen .kb-preview,
+#kb-screen .kb-empty,
+#kb-screen .kb-list,
+#kb-screen .kb-list-head {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+#kb-screen { background: linear-gradient(180deg, #090c15 0%, #070a12 52%, #05070d 100%) !important; }
+#kb-screen .kb-panel { background: transparent !important; border: 0 !important; }
+#kb-screen .kb-block { background: rgba(255, 255, 255, .022) !important; border-color: rgba(255, 255, 255, .07) !important; }
+#kb-screen .kb-drop { background: rgba(0, 0, 0, .16) !important; border-color: rgba(255, 255, 255, .08) !important; }
+#kb-screen .kb-main { background: rgba(255, 255, 255, .018) !important; border-color: rgba(255, 255, 255, .07) !important; }
+#kb-screen .kb-item { background: rgba(255, 255, 255, .025) !important; border-color: rgba(255, 255, 255, .07) !important; }
+#kb-screen .kb-item.is-selected { background: rgba(111, 242, 221, .06) !important; border-color: rgba(111, 242, 221, .34) !important; }
+#kb-screen .kb-discuss { background: #080b13 !important; }
+#kb-screen .kb-preview { background: rgba(0, 0, 0, .18) !important; border-color: rgba(255, 255, 255, .06) !important; }
+#kb-screen .kb-empty { background: rgba(255, 255, 255, .02) !important; border-color: rgba(255, 255, 255, .07) !important; }
+#kb-screen .kb-head { background: #080b13 !important; }
+#kb-screen .kb-side {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+#kb-screen .kb-list-foot { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; box-shadow: none !important; }
+#kb-screen .kb-tips { background: rgba(255, 255, 255, .015) !important; border-color: rgba(255, 255, 255, .06) !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+
+/* v3.9 用户要求：删除通话页底部的重复「角色对话条」——消息已经显示在聊天气泡里，
+   这条固定框会与最新气泡重叠，造成同一句话出现两次。只保留气泡区。 */
+#call-dialogue {
+  display: none !important;
+}
+
+
+/* ---------- v4.1 课程页：一条学习计划 + 统一的三节课列表 ---------- */
+.course-plan-page { display: flex; flex-direction: column; gap: 14px; max-width: 1180px; margin: 0 auto; padding-bottom: calc(var(--m-tabbar) + 28px); }
+.course-plan-page > .hero-card { width: 100%; }
+.course-lesson-list { display: flex; flex-direction: column; gap: 10px; }
+.course-lesson-row {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: rgba(12, 18, 30, .42);
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  box-shadow: 0 18px 44px -30px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .09);
+}
+.course-lesson-row.is-locked { opacity: .58; }
+.course-lesson-row.is-next-highlight { border-color: rgba(111, 242, 221, .34); }
+.clr-index { flex: none; width: 54px; display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+.clr-index strong { font-family: var(--font-en); font-size: 24px; line-height: 1; color: rgba(111, 242, 221, .82); font-weight: 800; letter-spacing: -.03em; }
+.clr-index span { font-size: 10px; color: var(--m-faint); letter-spacing: .04em; }
+.clr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.clr-top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.clr-emoji { font-size: 17px; }
+.clr-title { font-size: 15.5px; font-weight: 730; color: #f2f6ff; letter-spacing: -.01em; }
+.clr-meta { font-size: 10.5px; color: var(--m-faint); }
+.clr-objectives { margin: 2px 0 0; padding-left: 16px; display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; line-height: 1.5; color: var(--m-muted); }
+.clr-lock { display: flex; align-items: center; gap: 7px; font-size: 11.5px; line-height: 1.5; color: var(--m-faint); }
+.clr-action { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 7px; padding-top: 2px; }
+.course-lesson-row .lesson-resume { font-size: 11px; color: var(--m-teal); }
+.course-lesson-row .lesson-phrases { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+.course-lesson-row .lesson-phrases[hidden] { display: none !important; }
+.clr-phrase { display: flex; align-items: flex-start; gap: 8px; padding: 6px 9px; border-radius: 9px; background: rgba(111, 242, 221, .05); border: 1px solid rgba(111, 242, 221, .12); }
+.clr-phrase .icon-btn { width: 26px; height: 26px; border-radius: 8px; flex: none; }
+.clr-phrase-en { font-family: var(--font-en); font-size: 12px; line-height: 1.45; }
+.clr-phrase-zh { font-size: 10.5px; line-height: 1.4; color: var(--m-faint); margin-top: 1px; }
+@media (max-width: 900px) {
+  .course-lesson-row { flex-wrap: wrap; gap: 10px; }
+  .clr-action { width: 100%; align-items: flex-start; padding-left: 70px; flex-direction: row; flex-wrap: wrap; }
+  .clr-index { width: 46px; }
+  .clr-index strong { font-size: 20px; }
+}
+
+
+/* ---------- v4.2 我的页：桌面级仪表盘布局 ---------- */
+#screen-profile { padding-bottom: 0; }
+.profile-page {
+  display: flex; flex-direction: column; gap: 18px;
+  max-width: 1160px; margin: 0 auto;
+  padding-bottom: calc(var(--m-tabbar) + 44px);
+}
+.profile-hero {
+  display: grid; grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 14px; align-items: stretch;
+}
+.profile-hero .profile-card { height: 100%; }
+.profile-hero .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; height: 100%; }
+.profile-hero .stat { height: 100%; justify-content: center; }
+.profile-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 18px; align-items: start; }
+.profile-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.profile-page .list-card { overflow: hidden; border-radius: 18px; }
+.profile-page .interest-card { border-radius: 18px; padding: 16px; }
+.profile-page .sub-card { border-radius: 18px; }
+.profile-page .foot-note { padding-top: 2px; }
+@media (max-width: 1080px) {
+  .profile-hero { grid-template-columns: 1fr; }
+  .profile-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ==========================================================================
+   v4.3 我的页：三段式重排（资料 → 设置/兴趣 → Ava Plus）
+   ========================================================================== */
+.profile-page {
+  display: flex; flex-direction: column; gap: 16px;
+  max-width: 1080px; margin: 0 auto;
+  padding: 4px 0 calc(var(--m-tabbar) + 44px);
+}
+.profile-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.profile-lead { margin: 6px 0 0; font-size: 11.5px; color: var(--m-faint); }
+.profile-local { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--m-faint); padding-bottom: 3px; }
+.profile-local i { width: 5px; height: 5px; border-radius: 50%; background: var(--m-teal); box-shadow: 0 0 8px var(--m-teal); }
+
+.profile-hero-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 20px 24px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background:
+    radial-gradient(120% 140% at 0 0, rgba(111, 242, 221, .12), transparent 48%),
+    linear-gradient(150deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .015) 45%, rgba(255, 255, 255, 0)),
+    rgba(11, 17, 29, .5);
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: 0 26px 64px -36px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .13);
+}
+.ph-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.profile-hero-card .profile-avatar { width: 64px; height: 64px; border-radius: 20px; font-size: 24px; }
+.ph-meta { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.ph-name { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 750; letter-spacing: -.015em; }
+.ph-edit { width: 26px; height: 26px; border-radius: 8px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12); }
+.ph-sub { font-size: 11.5px; color: var(--m-muted); }
+.ph-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.ph-tags span { font-size: 10px; padding: 3px 8px; border-radius: 999px; color: rgba(210, 222, 248, .75); background: rgba(255, 255, 255, .055); border: 1px solid rgba(255, 255, 255, .1); }
+.ph-stats { display: flex; align-items: stretch; flex: none; }
+.ph-stat { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 2px 24px; border-left: 1px solid rgba(255, 255, 255, .1); }
+.ph-stat:first-child { border-left: 0; }
+.ph-stat strong { font-family: var(--font-en); font-size: 26px; line-height: 1; font-weight: 800; color: #f4f8ff; }
+.ph-stat span { font-size: 10px; color: var(--m-faint); }
+
+.profile-columns { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); gap: 16px; align-items: start; }
+.p-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.p-block {
+  padding: 17px 18px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  background: rgba(12, 18, 30, .4);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+  box-shadow: 0 20px 50px -34px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+.p-block-head { display: flex; align-items: center; gap: 10px; margin-bottom: 13px; }
+.p-block-icon { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--m-teal); background: rgba(111, 242, 221, .1); border: 1px solid rgba(111, 242, 221, .22); }
+.p-block-icon.accent { color: #b6a8ff; background: rgba(180, 156, 255, .1); border-color: rgba(180, 156, 255, .24); }
+.p-block-icon.warm { color: var(--m-warm); background: rgba(255, 197, 122, .1); border-color: rgba(255, 197, 122, .24); }
+.p-block-head h2 { font-size: 13.5px; font-weight: 720; letter-spacing: .01em; }
+.p-block-head p { margin-top: 2px; font-size: 10px; color: var(--m-faint); }
+.p-block .list-card { border-radius: 14px; background: rgba(7, 11, 19, .36); border: 1px solid rgba(255, 255, 255, .08); }
+.p-block .interest-card { padding: 0; background: transparent; border: 0; box-shadow: none; }
+.p-block .interest-tags { min-height: 44px; }
+.p-block .interest-form .input { background: rgba(7, 11, 19, .42); }
+.p-plus-desc { margin: 0 0 10px; font-size: 11.5px; line-height: 1.6; color: var(--m-faint); }
+.profile-note { text-align: center; font-size: 10px; letter-spacing: .03em; color: rgba(190, 204, 230, .32); padding-top: 2px; }
+@media (max-width: 980px) {
+  .profile-columns { grid-template-columns: 1fr; }
+  .profile-hero-card { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .ph-stats { width: 100%; }
+  .ph-stat { flex: 1; }
+}
+
+
+/* v4.4 我的页宽度兜底：兴趣输入/添加按钮永远不越出卡片 */
+.profile-page, .profile-columns, .p-side, .p-block, .interest-card { min-width: 0; }
+.profile-page { overflow-x: hidden; }
+.interest-form { display: flex; gap: 8px; width: 100%; min-width: 0; align-items: stretch; }
+.interest-form .input { flex: 1 1 auto; min-width: 0; width: auto; }
+.interest-form .btn { flex: none; white-space: nowrap; }
+.interest-tags { min-width: 0; }
+.interest-tag { max-width: 100%; overflow-wrap: anywhere; }
+.p-block .list-row { min-width: 0; }
+.p-block .list-main { min-width: 0; }
+.p-block .list-value { flex: none; max-width: 48%; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 兴趣标签：只保留外层 p-block 大框，去掉里面那层深色 interest-card */
+.profile-page .p-block .interest-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* v4.6 助手页左上角 Ava 商标：去掉旋转虚线圈与小点动效，避免和 logo/标题视觉重叠 */
+.ava-orb::before,
+.ava-orb::after {
+  content: none !important;
+  border: 0 !important;
+  animation: none !important;
+  display: none !important;
+}
+#screen-assistant .assistant-hero { padding-left: 4px; }
+
+/* 助手页的复习提醒 toast 放右上角，不压输入条 */
+body:has(#screen-assistant.is-active) .toasts {
+  position: fixed; left: auto; right: 24px; top: 92px; bottom: auto;
+  transform: none; width: min(380px, 34vw); align-items: flex-end;
+}
+
+/* 通话总结：重点句型 */
+.summary-pattern .en { font-family: var(--font-en); font-size: 13.5px; font-weight: 650; color: #eaf7ff; line-height: 1.45; }
+.summary-pattern-example { margin-top: 3px; font-family: var(--font-en); font-size: 11.5px; color: rgba(190, 235, 230, .82); line-height: 1.5; }
+.summary-pattern-usage { margin-top: 2px; font-size: 10.5px; color: var(--m-faint); line-height: 1.5; }
+.summary-kw-item em { display: block; margin-top: 2px; font-family: var(--font-en); font-style: normal; font-size: 10.5px; color: rgba(210, 224, 246, .55); line-height: 1.4; }
+
+/* ============ 图片资料 OCR 校对弹层 ============ */
+.ocr-review {
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.ocr-original, .ocr-textside { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ocr-col-title { font-size: 12px; font-weight: 720; color: #eef4ff; display: flex; align-items: center; gap: 8px; }
+.ocr-col-title span { font-size: 9.5px; font-weight: 600; color: #ffd9a9; border: 1px solid rgba(255,197,122,.3); background: rgba(255,197,122,.08); border-radius: 999px; padding: 2px 7px; }
+.ocr-original img {
+  width: 100%; max-height: 52dvh; object-fit: contain;
+  border-radius: 14px; border: 1px solid rgba(255,255,255,.12);
+  background: rgba(5,9,16,.55);
+}
+.ocr-textarea {
+  width: 100%; min-height: 42dvh; resize: vertical;
+  padding: 12px 14px; border-radius: 13px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(6,10,18,.62);
+  color: #eef4ff; font-size: 13px; line-height: 1.7; outline: none;
+  font-family: var(--font);
+}
+.ocr-textarea:focus { border-color: rgba(111,242,221,.5); box-shadow: 0 0 0 3px rgba(111,242,221,.08); }
+.ocr-hint { margin: 0; font-size: 10.5px; line-height: 1.55; color: var(--m-faint); }
+.ocr-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: auto; }
+@media (max-width: 900px) {
+  .ocr-review { grid-template-columns: 1fr; }
+  .ocr-textarea { min-height: 30dvh; }
+  .ocr-original img { max-height: 30dvh; }
+}
+
+/* ============ 知识库：粘贴文本 ============ */
+.kb-paste-open {
+  width: 100%;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(111, 242, 221, .26);
+  background: rgba(111, 242, 221, .08);
+  color: #bffcf2;
+  font-size: 12px; font-weight: 650;
+  cursor: pointer;
+  transition: .18s var(--m-ease);
+}
+.kb-paste-open:hover { background: rgba(111, 242, 221, .15); border-color: rgba(111, 242, 221, .5); }
+.kb-paste-open .icon { width: 15px; height: 15px; }
+.kb-paste-sheet { display: flex; flex-direction: column; gap: 10px; }
+.kb-paste-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.kb-paste-head strong { font-size: 14px; }
+.kb-paste-head p { margin-top: 3px; font-size: 11px; line-height: 1.55; color: var(--m-faint); }
+.kb-paste-badge { flex: none; font-size: 9px; color: #9ffcf0; border: 1px solid rgba(111,242,221,.3); background: rgba(111,242,221,.08); border-radius: 999px; padding: 3px 7px; white-space: nowrap; }
+.kb-paste-label { font-size: 10.5px; font-weight: 650; color: rgba(210, 224, 245, .7); }
+.kb-paste-sheet .kb-input { width: 100%; }
+.kb-paste-textarea {
+  width: 100%; min-height: 34dvh; resize: vertical;
+  padding: 12px 14px; border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: rgba(6, 10, 18, .62);
+  color: #eef4ff; font-size: 13px; line-height: 1.7; outline: none;
+  font-family: var(--font);
+}
+.kb-paste-textarea:focus { border-color: rgba(111,242,221,.5); box-shadow: 0 0 0 3px rgba(111,242,221,.08); }
+.kb-paste-actions { display: flex; align-items: center; gap: 8px; }
+.kb-paste-count { margin-left: auto; font-size: 10px; color: var(--m-faint); font-variant-numeric: tabular-nums; }
+
+/* 弹层打开时，lắng toast 移到右上角，避免压住粘贴/校对内容 */
+body.sheet-open .toasts {
+  position: fixed; left: auto; right: 24px; top: 76px; bottom: auto;
+  transform: none; width: min(380px, 34vw); align-items: flex-end; z-index: 140;
+}

@@ -1,0 +1,7 @@
+data/
+.runtime/
+test/artifacts/
+node_modules/
+.DS_Store
+*.log
+data-share/

@@ -1,0 +1,112 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>方案1 · 导入校对</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#05070c;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif;color:#eef3ff}
+.stage{position:fixed;inset:0}
+.bg{position:absolute;inset:-2%;background:url('/assets/characters/elena.jpg') center 20%/cover no-repeat;filter:brightness(.55)}
+.stage::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(4,6,11,.9),rgba(4,6,11,.58) 45%,rgba(4,6,11,.84))}
+.wrap{position:relative;z-index:2;width:min(1260px,94vw);margin:42px auto 0;display:flex;flex-direction:column;gap:16px}
+.top{display:flex;align-items:center;justify-content:space-between}
+.crumb{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.16em;color:rgba(150,235,225,.8);text-transform:uppercase}
+.crumb i{width:7px;height:7px;border-radius:50%;background:#6ff2dd;box-shadow:0 0 10px #6ff2dd}
+.back{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#eaf2ff}
+h1{font-size:23px;font-weight:760;letter-spacing:-.02em;margin-top:5px}
+.sub{font-size:11.5px;color:rgba(196,212,240,.55);margin-top:3px}
+.pills{display:flex;gap:8px}
+.pill{padding:6px 11px;border-radius:999px;font-size:10.5px;color:rgba(220,232,252,.75);background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12)}
+.pill.on{color:#8ff8e8;border-color:rgba(111,242,221,.35);background:rgba(111,242,221,.09)}
+.mini{padding:5px 9px;border-radius:8px;font-size:10px;color:rgba(255,255,255,.65);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.compare{display:grid;grid-template-columns:1.02fr .98fr;gap:16px}
+.card{border-radius:20px;background:rgba(12,17,29,.5);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(24px) saturate(145%);box-shadow:0 28px 70px -40px #000;overflow:hidden}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.card-title{font-size:13px;font-weight:720;display:flex;align-items:center;gap:7px}
+.card-title svg{width:15px;height:15px;color:#6ff2dd}
+.tag{font-size:9.5px;padding:3px 8px;border-radius:999px;color:#ffd9a9;border:1px solid rgba(255,197,122,.34);background:rgba(255,197,122,.1)}
+.tag.teal{color:#9ffcf0;border-color:rgba(111,242,221,.3);background:rgba(111,242,221,.08)}
+.doc-img{margin:14px;border-radius:14px;overflow:hidden;background:#dedbd2;color:#222;box-shadow:0 18px 36px -24px #000;transform:rotate(-.4deg)}
+.doc-pad{padding:18px 20px;font-family:Georgia,"Times New Roman",serif}
+.doc-pad .kicker{font-size:8px;letter-spacing:.2em;color:#8b3b2b;font-weight:700}
+.doc-pad h2{font-size:19px;line-height:1.1;margin:5px 0 4px;color:#1b1b1b}
+.doc-pad .small{font-size:8px;color:#666;margin-bottom:8px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cols p{font-size:8.3px;line-height:1.45;color:#3f3f3f;margin-bottom:6px;text-align:justify}
+.cols p b{color:#111}
+.redline{display:inline-block;background:rgba(255,110,110,.3);outline:1px solid rgba(220,50,50,.5)}
+.caption{padding:0 16px 13px;font-size:10px;color:rgba(190,205,230,.45)}
+.extract{padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px}
+.quality{display:flex;align-items:center;gap:10px;font-size:10.5px;color:rgba(220,230,250,.62)}
+.qbar{flex:1;height:5px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden}
+.qbar i{display:block;height:100%;width:86%;background:linear-gradient(90deg,#6ff2dd,#b49cff)}
+.qnum{font-family:"SF Mono",monospace;color:#9ffcf0;font-size:11px}
+.textbox{background:rgba(5,9,16,.5);border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:13px 15px;font-size:12px;line-height:1.75;color:rgba(230,238,255,.9)}
+.textbox p{margin-bottom:7px}
+.textbox p:last-child{margin-bottom:0}
+.err{background:rgba(255,113,136,.17);border-bottom:1px dashed rgba(255,130,150,.8);color:#ffd0d8;padding:0 2px;border-radius:2px}
+.fix{font-size:9px;color:#8ff8e8;background:rgba(111,242,221,.1);border:1px solid rgba(111,242,221,.24);border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:1px}
+.issue{display:flex;align-items:center;gap:7px;font-size:10px;color:rgba(205,220,245,.55)}
+.issue b{color:#ffb3c0;font-weight:600}
+.actions{display:flex;align-items:center;justify-content:space-between;margin-top:2px}
+.left-actions{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 15px;border-radius:11px;border:0;font-size:11px;font-weight:650;color:#eaf2ff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13)}
+.btn.primary{color:#06211e;background:linear-gradient(145deg,#c9fff8,#6ff2dd 60%,#96e8e0);border-color:transparent;box-shadow:0 12px 28px -14px rgba(111,242,221,.8)}
+.btn.warn{color:#ffd7dd;background:rgba(255,113,136,.1);border-color:rgba(255,113,136,.3)}
+.note{font-size:10px;color:rgba(180,198,228,.4);display:flex;align-items:center;gap:6px}
+.note i{width:5px;height:5px;border-radius:50%;background:#6ff2dd;box-shadow:0 0 8px #6ff2dd}
+.steps{display:flex;align-items:center;gap:9px;font-size:10px;color:rgba(190,207,235,.42)}
+.steps b{color:#9ffcf0;font-weight:700}
+.steps span{width:26px;height:1px;background:rgba(255,255,255,.14)}
+
+.source-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:2px}
+.source{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(12,17,29,.45);border:1px solid rgba(255,255,255,.11);backdrop-filter:blur(18px)}
+.source b{display:block;font-size:11.5px;font-weight:680;color:#f2f6ff}
+.source small{display:block;font-size:9.5px;color:rgba(190,205,230,.5);margin-top:2px}
+.s-ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:rgba(111,242,221,.08);border:1px solid rgba(111,242,221,.2);font-size:13px}
+.s-ok{margin-left:auto;font-size:9px;color:#9ffcf0;border:1px solid rgba(111,242,221,.3);background:rgba(111,242,221,.08);border-radius:999px;padding:2px 7px;white-space:nowrap}
+.s-warn{margin-left:auto;font-size:9px;color:#ffd9a9;border:1px solid rgba(255,197,122,.3);background:rgba(255,197,122,.08);border-radius:999px;padding:2px 7px;white-space:nowrap}
+</style></head><body><div class="stage"><div class="bg"></div><div class="wrap">
+  <div class="top">
+    <div style="display:flex;align-items:center;gap:13px">
+      <div class="back">‹</div>
+      <div><div class="crumb"><i></i>Knowledge Base · Import</div><h1>导入预览</h1><div class="sub">图片资料先校对，确认后才会进入资料库和讲解</div></div>
+    </div>
+    <div class="pills"><span class="pill on">链接 / 文件 · 原生提取</span><span class="pill">图片 · 校对入库</span><span class="pill">句子级跟随</span></div>
+  </div>
+  <div class="compare">
+    <div class="card">
+      <div class="card-head"><div class="card-title">原始图片 <span class="tag">截图 OCR</span></div><span class="mini">查看原图</span></div>
+      <div class="doc-img"><div class="doc-pad">
+        <div class="kicker">NEWS AND ANALYSIS</div><h2>iS Clinical expands UK partner network</h2>
+        <div class="small">BUSINESS · AESTHETICS · OCTOBER 2026</div>
+        <div class="cols">
+          <p><b>iS Clinical</b> has expanded its UK partner network with ALTA Media. The Marylebone clinic will offer its Clinical treatments, including its Fire &amp; Ice facial, alongside the brand's wider professional skincare portfolio.</p>
+          <p>BTL has established a dedicated laser division and announced EXOLASEONE, a new fused erbium laser system combining multiple wavelengths into a <span class="redline">single beam</span>. The platform is expected to launch globally in 2027.</p>
+        </div>
+        <p style="font-size:8.3px;line-height:1.45;color:#3f3f3f">Claudia McGloin Launches The Regenerative Expert Nurse. Based in Sligo, Ireland, McGloin has transitioned her practice away from traditional aesthetic medicine to focus on regenerative aesthetics.</p>
+      </div></div>
+      <div class="caption">⚠ 截图排版发生了换行/挤压，OCR 会把单词粘在一起</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">提取文本 <span class="tag teal">校对后入库</span></div><span class="mini">重新识别</span></div>
+      <div class="extract">
+        <div class="quality"><span>识别质量</span><div class="qbar"><i></i></div><span class="qnum">86%</span><span>3 处需确认</span></div>
+        <div class="textbox">
+          <p>iS Clinical has expanded its UK <span class="err">partnernework</span><span class="fix">partner network</span> with ALTA Media.</p>
+          <p>The Marylebone clinic will offer <span class="err">isClinical</span><span class="fix">iS Clinical</span> treatments, including its Fire &amp; Ice facial, alongside the brand's wider professional skincare portfolio.</p>
+          <p>BTL has established a dedicated laser division and announced EXOLASEI ONE, a new fused erbium laser system combining multiple wavelengths into a single beam.</p>
+        </div>
+        <div class="issue"><span>⚠</span><b>partnernework</b><span>→ partner network</span><span style="margin-left:auto">点击词可修改</span></div>
+        <div class="actions">
+          <div class="left-actions"><button class="btn">换源文件</button><button class="btn warn">重新 OCR</button></div>
+          <button class="btn primary">确认入库 →</button>
+        </div>
+        <div class="note"><i></i>链接 / PDF / Word 会跳过这一步，直接进入资料库</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="source-row">
+    <div class="source"><span class="s-ic">🔗</span><div><b>网页链接</b><small>抓 HTML 正文 → 直接入库，不走 OCR</small></div><span class="s-ok">零 OCR</span></div>
+    <div class="source"><span class="s-ic">📄</span><div><b>PDF / Word / PPT</b><small>读取原生文字层 → 保留段落结构</small></div><span class="s-ok">零 OCR</span></div>
+    <div class="source"><span class="s-ic">🖼</span><div><b>截图 / 扫描件</b><small>OCR → 校对 → 确认后才入库</small></div><span class="s-warn">需校对</span></div>
+  </div>
+</div></div></body></html>

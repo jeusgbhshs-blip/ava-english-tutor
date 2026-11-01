@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070e">
+<meta name="description" content="Ava — AI 数字人英语老师：实时语音对话、跟读打分、单词闯关与角色扮演。">
+<title>Ava · AI 数字人英语老师</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%235eead4'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%230a1020'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='url(%23g)' stroke-width='2.5' opacity='.9'/%3E%3Cpath d='M23 42 32 20l9 22M27 36h10' fill='none' stroke='url(%23g)' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+<!-- 图标精灵：全部内联 SVG，无外部资源 -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad-accent" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+  </defs>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2.5"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="m4.5 12 15-7-7 15-2-6-6-2Z"/><path d="m12.5 14 2.5-2.5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.9 19.3a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.7 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.7 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.7a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.7a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.3 9v.01c.14.62.64 1.1 1.26 1.2H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51.79Z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 22c4 0 7-2.7 7-6.5 0-3.2-2-5.4-3.4-7.2C14.4 6.9 13 5 13 2c-3 2-4 5-4 8 0 1.2.3 2.2.8 3-1-.2-1.9-.8-2.5-1.7C6.5 13 5 14.6 5 16.5 5 20 8.2 22 12 22Z"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9.5 9.5 0 0 1 0 13"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15.5-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.4L3 16"/><path d="M3 21v-5h5"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.9 4.9L19 9.8l-4.4 3.4L16 19l-4-2.7L8 19l1.4-5.8L5 9.8l5.1-1.9L12 3Z"/><path d="M19 15l.7 1.8L21.5 17.5l-1.8.9L19 20l-.7-1.6-1.8-.9 1.8-.7L19 15Z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5V4.5Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M8 7h8M8 11h5"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="5" height="7" rx="2"/><rect x="17" y="14" width="5" height="7" rx="2"/></symbol>
+  <symbol id="i-theater" viewBox="0 0 24 24"><path d="M3 5h18v9a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6V5Z"/><path d="M8 10h.01M16 10h.01M9 14c1.8 1.3 4.2 1.3 6 0"/></symbol>
+  <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H8l-5 3 1.4-4.3A8 8 0 1 1 21 12Z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2.8 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3-5.8 3 1.1-6.5L2.6 9.6l6.5-.9L12 2.8Z"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/></symbol>
+  <symbol id="i-fold" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/><path d="m10 9-3 3 3 3"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 6H5v2a3 3 0 0 0 3 3M16 6h3v2a3 3 0 0 1-3 3"/><path d="M12 13v4M8.5 21h7M10 21c0-2 .8-4 2-4s2 2 2 4"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.8 2.8L16.5 9"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 9v5M12 17.5h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-ear" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 3-2 4-3.5 5.5S13 18 13 19a3 3 0 0 1-5.5 1.6"/><path d="M9 9a3 3 0 0 1 6 0c0 1.5-1 2-1.5 2.8"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 22c4 0 7-2.7 7-6.5 0-3.2-2-5.4-3.4-7.2C14.4 6.9 13 5 13 2c-3 2-4 5-4 8 0 1.2.3 2.2.8 3-1-.2-1.9-.8-2.5-1.7C6.5 13 5 14.6 5 16.5 5 20 8.2 22 12 22Z"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4M22 12h-.5"/></symbol>
+</svg>
+
+<div class="app" id="app">
+  <!-- ============ 顶部栏 ============ -->
+  <header class="topbar" id="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17.5" fill="none" stroke="url(#grad-accent)" stroke-width="1.6" opacity=".75"/><path d="M13.5 27.5 20 12l6.5 15.5M16 22.6h8" fill="none" stroke="url(#grad-accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="brand-text"><strong>Ava</strong><em>AI 英语老师</em></span>
+    </div>
+
+    <nav class="mode-tabs" id="mode-tabs" role="tablist" aria-label="学习模式">
+      <button type="button" class="mode-tab is-active" data-mode="free" role="tab" aria-label="自由对话" aria-selected="true" title="自由对话">
+        <span class="mt-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chat"></use></svg></span><span class="mt-label">自由对话</span>
+      </button>
+      <button type="button" class="mode-tab" data-mode="vocab" role="tab" aria-label="单词闯关" aria-selected="false" title="单词闯关">
+        <span class="mt-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"></use></svg></span><span class="mt-label">单词闯关</span>
+      </button>
+      <button type="button" class="mode-tab" data-mode="pronounce" role="tab" aria-label="跟读打分" aria-selected="false" title="跟读打分">
+        <span class="mt-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-headphones"></use></svg></span><span class="mt-label">跟读打分</span>
+      </button>
+      <button type="button" class="mode-tab" data-mode="roleplay" role="tab" aria-label="角色扮演" aria-selected="false" title="角色扮演">
+        <span class="mt-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-theater"></use></svg></span><span class="mt-label">角色扮演</span>
+      </button>
+      <button type="button" class="mode-tab" data-mode="reading" role="tab" aria-label="阅读讲解" aria-selected="false" title="阅读讲解">
+        <span class="mt-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file-text"></use></svg></span><span class="mt-label">阅读讲解</span>
+      </button>
+    </nav>
+
+    <div class="topbar-right">
+      <button type="button" class="engine-pill" id="engine-pill" hidden title="当前语音引擎：豆包实时语音 3.0（点击修改）" aria-label="当前语音引擎：豆包实时语音，点击打开设置">
+        <span class="engine-dot"></span>豆包语音
+      </button>
+      <button type="button" class="demo-pill" id="demo-pill" hidden title="未配置 API Key：Ava 使用内置脚本演示。点击填入 Key 升级为真 AI。" aria-label="演示模式：点击打开设置，填入 API Key 升级为真 AI">
+        <span class="demo-dot"></span>演示模式
+      </button>
+      <label class="level-select-wrap" title="CEFR 等级：影响用词难度与语速">
+        <span class="level-label">等级</span>
+        <span class="select-box">
+          <select id="level-select" class="level-select" aria-label="CEFR 等级"></select>
+          <svg class="icon select-caret" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+        </span>
+      </label>
+      <button type="button" class="icon-btn" id="btn-wordbook" title="今日单词表" aria-label="今日单词表">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"></use></svg>
+        <span class="btn-badge is-teal" id="wordbook-badge" hidden>0</span>
+      </button>
+      <button type="button" class="icon-btn" id="btn-progress" title="学习进度" aria-label="学习进度">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chart"></use></svg>
+        <span class="btn-badge" id="streak-badge" hidden>0</span>
+      </button>
+      <button type="button" class="icon-btn" id="btn-settings" title="设置" aria-label="设置">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gear"></use></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ 中部：舞台 + 右栏 ============ -->
+  <main class="main" id="main">
+    <section class="stage" id="stage" aria-label="数字人老师舞台">
+      <div class="stage-grid" aria-hidden="true"></div>
+      <div class="stage-orb orb-a" aria-hidden="true"></div>
+      <div class="stage-orb orb-b" aria-hidden="true"></div>
+      <div class="stage-rings" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="stage-floor" aria-hidden="true"></div>
+
+      <div class="stage-chip" id="stage-chip" hidden>
+        <span class="stage-chip-emoji" id="stage-chip-emoji">☕️</span>
+        <span class="stage-chip-text" id="stage-chip-text"></span>
+      </div>
+
+      <div class="avatar-stage" id="avatar-stage"></div>
+      <div class="stage-fallback" id="stage-fallback" hidden>
+        <div class="fallback-orb"><span></span></div>
+        <p>数字人正在加载…</p>
+      </div>
+
+      <div class="stage-confetti" id="stage-confetti" aria-hidden="true"></div>
+      <div class="encourage-bubble" id="encourage-bubble" hidden aria-live="polite"></div>
+    </section>
+
+    <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+
+    <aside class="sidepanel" id="sidepanel" aria-label="学习面板">
+      <div class="panel-head">
+        <span class="panel-title"><span class="live-dot"></span>教练面板</span>
+        <button type="button" class="panel-fold" id="btn-fold" title="折叠右栏" aria-label="折叠右栏">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-fold"></use></svg>
+        </button>
+      </div>
+      <div class="panel-scroll" id="panel-scroll">
+        <section class="mode-panel" id="mode-panel" aria-label="当前模式面板"></section>
+        <section class="feedback-panel" id="feedback-panel" aria-label="教练反馈"></section>
+      </div>
+    </aside>
+    <button type="button" class="panel-unfold" id="btn-unfold" hidden title="展开右栏" aria-label="展开右栏">
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron-left"></use></svg>
+    </button>
+  </main>
+
+  <!-- ============ 底部 Dock ============ -->
+  <footer class="dock" id="dock" aria-label="语音控制区">
+    <div class="caption" id="caption" aria-live="polite">
+      <div class="caption-user" id="caption-user" hidden></div>
+      <div class="caption-zh caption-user-zh" id="caption-user-zh" hidden aria-live="polite"></div>
+      <div class="caption-reply" id="caption-reply">
+        <span class="caption-ph"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg>点麦克风，和 Ava 开始一段英语对话</span>
+      </div>
+      <div class="caption-zh caption-reply-zh" id="caption-reply-zh" hidden aria-live="polite"></div>
+      <div class="caption-interim" id="caption-interim" hidden></div>
+    </div>
+
+    <div class="dock-row">
+      <div class="dock-side dock-left">
+        <button type="button" class="dock-action zh-btn" id="btn-chinese" title="中文求助：说中文，Ava 教你怎么用英文说" aria-label="中文求助" aria-pressed="false">
+          <span class="zh-glyph" aria-hidden="true">中</span><span class="da-label">中文求助</span>
+        </button>
+        <div class="dock-modes" id="dock-left"></div>
+      </div>
+
+      <div class="mic-cluster">
+        <div class="status-label" id="status-label">
+          <span class="status-dot"></span>
+          <span id="status-text">准备就绪</span>
+        </div>
+        <div class="mic-wrap">
+          <div class="mic-rings" aria-hidden="true"><span></span><span></span><span></span></div>
+          <button type="button" class="mic-btn" id="btn-mic" aria-label="开始说话" aria-pressed="false" title="点击开始说话">
+            <svg class="icon icon-mic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mic"></use></svg>
+            <svg class="icon icon-stop" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-stop"></use></svg>
+            <span class="mic-spinner" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="mic-hint" id="mic-hint">点击麦克风开始说英语 · 也可按空格</div>
+      </div>
+
+      <button type="button" class="dock-action drawer-toggle" id="btn-drawer" title="打开教练面板" aria-label="打开教练面板">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"></use></svg>
+        <span class="da-label">教练</span>
+        <span class="drawer-badge" id="drawer-badge" hidden>0</span>
+      </button>
+
+      <div class="dock-side dock-right">
+        <form class="textform" id="text-form" autocomplete="off">
+          <svg class="icon textform-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-keyboard"></use></svg>
+          <input type="text" id="text-input" class="text-input" placeholder="也可以打字说英文或中文…" maxlength="300" aria-label="打字输入英文或中文" spellcheck="false">
+          <button type="submit" class="send-btn" id="btn-send" title="发送" aria-label="发送">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-send"></use></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ============ 设置弹窗 ============ -->
+<div class="modal-layer" id="modal-settings" hidden>
+  <div class="modal-backdrop" data-close="modal-settings"></div>
+  <div class="modal modal-settings" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <header class="modal-head">
+      <div>
+        <h2 id="settings-title">设置</h2>
+        <p class="modal-sub">配置 AI 模型与课堂偏好，保存后立即生效</p>
+      </div>
+      <button type="button" class="icon-btn ghost" data-close="modal-settings" aria-label="关闭设置">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"></use></svg>
+      </button>
+    </header>
+
+    <div class="modal-body">
+      <div class="callout callout-demo" id="settings-demo-callout">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg>
+        <div><strong>当前是演示模式</strong><p>Ava 会用内置脚本回复，所有功能都能体验。填入 API Key 即可升级为真 AI 对话。</p></div>
+      </div>
+
+      <div class="field-group">
+        <h3 class="field-group-title"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg>AI 模型</h3>
+        <div class="chips" id="settings-presets"></div>
+        <label class="field">
+          <span class="field-label">Base URL</span>
+          <input type="text" id="set-baseurl" class="input" placeholder="https://api.deepseek.com" spellcheck="false">
+        </label>
+        <label class="field">
+          <span class="field-label">模型</span>
+          <input type="text" id="set-model" class="input" placeholder="deepseek-chat" spellcheck="false">
+        </label>
+        <form class="field" id="apikey-form" action="#" method="post" autocomplete="off">
+          <label class="field-label" for="set-apikey">API Key <svg class="icon field-lock" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-lock"></use></svg></label>
+          <input type="password" id="set-apikey" class="input" placeholder="sk-…（只保存在本机，不会回显）" autocomplete="off" spellcheck="false">
+          <span class="field-hint" id="set-key-hint">密钥仅保存在本机 <code>data/settings.json</code>，界面永不回显原文。</span>
+        </form>
+        <div class="field-inline">
+          <button type="button" class="btn btn-ghost" id="btn-test">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wave"></use></svg>测试连接
+          </button>
+          <span class="test-result" id="test-result" role="status"></span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <h3 class="field-group-title"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-headphones"></use></svg>课堂偏好</h3>
+        <label class="field">
+          <span class="field-label">英文音色</span>
+          <span class="select-box full">
+            <select id="set-voice" class="input select" aria-label="英文音色"></select>
+            <svg class="icon select-caret" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+          </span>
+          <span class="field-hint" id="voice-hint">选择 Ava 朗读用的英文音色；不同系统可用的音色不同。</span>
+        </label>
+        <div class="field-inline">
+          <button type="button" class="btn btn-ghost" id="btn-voice-preview">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-volume"></use></svg>试听音色
+          </button>
+        </div>
+        <label class="field">
+          <span class="field-label">教师名</span>
+          <input type="text" id="set-teacher" class="input" placeholder="Ava" maxlength="20">
+        </label>
+        <label class="switch-field">
+          <span>
+            <span class="field-label">中文解释</span>
+            <span class="field-hint">在纠正卡里显示中文说明与鼓励</span>
+          </span>
+          <span class="switch"><input type="checkbox" id="set-explain"><span class="switch-track"></span></span>
+        </label>
+        <label class="switch-field">
+          <span>
+            <span class="field-label">自动连续对话</span>
+            <span class="field-hint">Ava 说完后自动开始聆听</span>
+          </span>
+          <span class="switch"><input type="checkbox" id="set-autolisten"><span class="switch-track"></span></span>
+        </label>
+        <div class="field-inline">
+          <button type="button" class="btn btn-danger-ghost" id="btn-clear-key">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"></use></svg>清除已保存的 Key
+          </button>
+        </div>
+      </div>
+
+      <div class="field-group" id="voice-engine-group">
+        <h3 class="field-group-title"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wave"></use></svg>语音引擎（高级）</h3>
+        <div class="radio-cards" role="radiogroup" aria-label="语音引擎">
+          <label class="radio-card" for="engine-browser">
+            <input type="radio" name="voice-engine" id="engine-browser" value="browser">
+            <span class="radio-card-body">
+              <span class="radio-card-title">浏览器内置语音</span>
+              <span class="radio-card-desc">默认 · 本机识别 + 系统朗读，完全离线可用</span>
+            </span>
+          </label>
+          <label class="radio-card" for="engine-volc">
+            <input type="radio" name="voice-engine" id="engine-volc" value="volc">
+            <span class="radio-card-body">
+              <span class="radio-card-title">豆包实时语音 3.0</span>
+              <span class="radio-card-desc">更低延迟、更自然 · 自由对话 / 角色扮演生效</span>
+            </span>
+          </label>
+        </div>
+
+        <form class="volc-config" id="volc-config" action="#" method="post" autocomplete="off" hidden>
+          <div class="callout callout-warm">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-alert"></use></svg>
+            <div>
+              <strong>音频会发送到火山引擎</strong>
+              <p>需要火山账号已开通「端到端实时语音」；连接失败会自动回退浏览器语音。凭据只保存在本机，界面不回显。</p>
+            </div>
+          </div>
+          <label class="field">
+            <span class="field-label">App ID</span>
+            <input type="text" id="volc-appid" class="input" placeholder="例如 1234567890" spellcheck="false">
+          </label>
+          <label class="field">
+            <span class="field-label">API Key <span class="field-hint" style="margin:0">（与 Access Token 二选一）</span></span>
+            <input type="password" id="volc-apikey" class="input" placeholder="填写 API Key" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span class="field-label">Access Token（可选）</span>
+            <input type="password" id="volc-token" class="input" placeholder="填写 Access Token（没有 API Key 时使用）" autocomplete="off" spellcheck="false">
+          </label>
+          <div class="volc-grid">
+            <label class="field">
+              <span class="field-label">模型版本</span>
+              <input type="text" id="volc-model" class="input" placeholder="3.0" spellcheck="false">
+            </label>
+            <label class="field">
+              <span class="field-label">音色 ID</span>
+              <input type="text" id="volc-speaker" class="input" placeholder="en_female_dacey_uranus_bigtts" spellcheck="false">
+            </label>
+          </div>
+          <label class="field">
+            <span class="field-label">服务地址</span>
+            <input type="text" id="volc-endpoint" class="input" placeholder="wss://openspeech.bytedance.com/api/v3/realtime/dialogue" spellcheck="false">
+          </label>
+          <label class="field">
+            <span class="field-label">资源 ID</span>
+            <input type="text" id="volc-resource" class="input" placeholder="volc.speech.dialog" spellcheck="false">
+          </label>
+          <div class="field-inline">
+            <button type="button" class="btn btn-ghost" id="btn-test-volc">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wave"></use></svg>测试连接
+            </button>
+            <button type="button" class="btn btn-danger-ghost" id="btn-clear-volc">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"></use></svg>清除语音凭据
+            </button>
+            <span class="test-result" id="volc-test-result" role="status"></span>
+          </div>
+          <span class="field-hint" id="volc-key-hint">凭据只保存在本机 <code>data/settings.json</code>，界面永不回显原文。</span>
+        </form>
+      </div>
+    </div>
+
+    <footer class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="btn-guide" title="重新查看新手引导" style="margin-right:auto">新手引导</button>
+      <button type="button" class="btn btn-ghost" data-close="modal-settings">取消</button>
+      <button type="button" class="btn btn-primary" id="btn-save-settings">保存并生效</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ 进度弹窗 ============ -->
+<div class="modal-layer" id="modal-progress" hidden>
+  <div class="modal-backdrop" data-close="modal-progress"></div>
+  <div class="modal modal-progress" role="dialog" aria-modal="true" aria-labelledby="progress-title">
+    <header class="modal-head">
+      <div>
+        <h2 id="progress-title">学习进度</h2>
+        <p class="modal-sub">每一次开口都会记录下来</p>
+      </div>
+      <button type="button" class="icon-btn ghost" data-close="modal-progress" aria-label="关闭进度">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"></use></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <div class="stat-grid" id="stat-grid"></div>
+      <div class="chart-card">
+        <div class="chart-head">
+          <h3>最近 7 天</h3>
+          <span class="chart-legend"><i class="dot-turn"></i>句子数</span>
+        </div>
+        <div class="chart" id="progress-chart"></div>
+      </div>
+      <div class="wordbank-card">
+        <div class="chart-head">
+          <h3>我的词库</h3>
+          <button type="button" class="btn btn-mini" id="btn-review-words">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg>到期复习
+          </button>
+        </div>
+        <div class="wordbank-list" id="wordbank-list"></div>
+      </div>
+    </div>
+    <footer class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close="modal-progress">关闭</button>
+    </footer>
+  </div>
+</div>
+
+
+<!-- ============ 结束对话总结弹窗 ============ -->
+<div class="modal-layer" id="modal-summary" hidden>
+  <div class="modal-backdrop" data-close="modal-summary"></div>
+  <div class="modal modal-summary" role="dialog" aria-modal="true" aria-labelledby="summary-title">
+    <header class="modal-head">
+      <div>
+        <h2 id="summary-title">本次对话总结</h2>
+        <p class="modal-sub" id="summary-sub">Ava 帮你把这次聊天整理成可复习的笔记</p>
+      </div>
+      <button type="button" class="icon-btn ghost" data-close="modal-summary" aria-label="关闭总结">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"></use></svg>
+      </button>
+    </header>
+    <div class="modal-body summary-body" id="summary-body"></div>
+    <footer class="modal-foot summary-foot" id="summary-foot">
+      <button type="button" class="btn btn-ghost" id="btn-summary-wordbook">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"></use></svg>查看今日单词表
+      </button>
+      <button type="button" class="btn btn-primary" id="btn-summary-continue">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chat"></use></svg>继续聊
+      </button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ 今日单词表弹窗 ============ -->
+<div class="modal-layer" id="modal-wordbook" hidden>
+  <div class="modal-backdrop" data-close="modal-wordbook"></div>
+  <div class="modal modal-wordbook" role="dialog" aria-modal="true" aria-labelledby="wordbook-title">
+    <header class="modal-head">
+      <div>
+        <h2 id="wordbook-title">今日单词表</h2>
+        <p class="modal-sub" id="wordbook-sub">每次结束对话后，重点单词会自动收进这里</p>
+      </div>
+      <button type="button" class="icon-btn ghost" data-close="modal-wordbook" aria-label="关闭单词本">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"></use></svg>
+      </button>
+    </header>
+    <div class="modal-body wordbook-body" id="wordbook-body"></div>
+    <footer class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="btn-wordbook-refresh">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-refresh"></use></svg>刷新
+      </button>
+      <button type="button" class="btn btn-primary" data-close="modal-wordbook">关闭</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ 首次引导 ============ -->
+<div class="onboarding" id="onboarding" hidden>
+  <div class="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+    <div class="ob-orb" aria-hidden="true"><span></span></div>
+    <p class="ob-eyebrow">Ava · AI 英语老师</p>
+    <h2 id="onboarding-title">欢迎来到 Ava 英语角</h2>
+    <p class="ob-sub">Ava 是一个像朋友一样的数字外国人：想聊什么就聊什么，聊完还会帮你整理总结和今天的重点单词。</p>
+    <ul class="ob-steps">
+      <li>
+        <span class="ob-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mic"></use></svg></span>
+        <div><strong>允许麦克风</strong><p>点下方「开始体验」后允许麦克风权限，Ava 才能听到你说话。浏览器只会把语音交给本机的语音识别。</p></div>
+      </li>
+      <li>
+        <span class="ob-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sparkles"></use></svg></span>
+        <div><strong>想聊什么就聊什么</strong><p>工作、天气、追剧、烦恼…… 中英夹着说也可以，Ava 会接住你的话，顺便纠正语法、教你更地道的说法。</p></div>
+      </li>
+      <li>
+        <span class="ob-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-ear"></use></svg></span>
+        <div><strong>听不懂、不会说就说中文</strong><p>直接说或打字说中文，或者点麦克风旁的「中文求助」按钮：Ava 会先听懂你的意思，再教你这句英文怎么说。</p></div>
+      </li>
+      <li>
+        <span class="ob-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"></use></svg></span>
+        <div><strong>聊完自动整理总结</strong><p>点「结束对话并总结」，Ava 会整理本次话题、亮点、纠错与重点单词，并自动收进今日单词表。</p></div>
+      </li>
+    </ul>
+    <div class="ob-warning" id="ob-warning" hidden>
+      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-alert"></use></svg>
+      <p>当前浏览器不支持语音识别（建议使用 Chrome / Edge）。你可以直接用下方输入框打字练习，其余功能完全正常。</p>
+    </div>
+    <div class="ob-actions">
+      <button type="button" class="btn btn-primary btn-lg" id="btn-ob-start">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mic"></use></svg>开始体验
+      </button>
+      <button type="button" class="btn btn-ghost btn-lg" id="btn-ob-type">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-keyboard"></use></svg>先打字体验
+      </button>
+    </div>
+    <p class="ob-foot">麦克风音频只在本机浏览器处理；无 Key 时全部功能可体验（演示模式）。</p>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<noscript>
+  <div class="noscript">Ava 需要启用 JavaScript 才能运行，请在浏览器设置中开启后刷新页面。</div>
+</noscript>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>

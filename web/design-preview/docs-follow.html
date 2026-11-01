@@ -1,0 +1,58 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>方案1 · 跟随讲解</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#05070c;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif;color:#eef3ff}
+.stage{position:fixed;inset:0}
+.bg{position:absolute;inset:-2%;background:url('/assets/characters/elena.jpg') center 24%/cover no-repeat;filter:brightness(.72)}
+.stage::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(4,6,11,.78),rgba(4,6,11,.14) 55%,rgba(4,6,11,.62))}
+.top{position:absolute;left:28px;top:24px;right:28px;display:flex;justify-content:space-between;z-index:3}
+.who{display:flex;align-items:center;gap:12px}
+.back{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
+h1{font-size:22px;font-weight:760}.sub{font-size:10.5px;color:rgba(210,224,250,.55);margin-top:2px}
+.live{font-size:9px;color:#ffdce2;background:rgba(255,113,136,.13);border:1px solid rgba(255,113,136,.3);border-radius:999px;padding:4px 8px;margin-left:7px}
+.docs{position:absolute;right:22px;top:18px;bottom:18px;width:610px;z-index:4;border-radius:20px;border:1px solid rgba(255,255,255,.16);background:rgba(11,16,27,.62);backdrop-filter:blur(26px) saturate(150%);box-shadow:0 30px 80px -40px #000;overflow:hidden;display:flex;flex-direction:column}
+.docs-head{padding:14px 16px 11px;border-bottom:1px solid rgba(255,255,255,.09);display:flex;align-items:center;gap:10px}
+.orb{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:rgba(111,242,221,.1);border:1px solid rgba(111,242,221,.27);color:#6ff2dd}
+.h-title{font-size:12.5px;font-weight:720}.h-sub{font-size:9.5px;color:rgba(190,205,230,.5);margin-top:2px}
+.head-tools{margin-left:auto;display:flex;align-items:center;gap:6px}
+.mini{font-size:9px;padding:4px 7px;border-radius:7px;color:rgba(225,235,255,.7);border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05)}
+.mini.on{color:#9ffcf0;border-color:rgba(111,242,221,.3);background:rgba(111,242,221,.09)}
+.docs-body{padding:14px 16px;overflow:hidden;font-family:Georgia,"Times New Roman",serif;font-size:13.5px;line-height:1.72;color:rgba(225,233,248,.88)}
+.docs-body .kicker{font-size:8px;letter-spacing:.18em;color:#e0c089;font-family:-apple-system,sans-serif;font-weight:700}
+.docs-body h2{font-family:-apple-system,"PingFang SC",sans-serif;font-size:17px;line-height:1.25;margin:4px 0 2px;color:#fff}
+.docs-body .meta{font-family:-apple-system,sans-serif;font-size:9px;color:rgba(190,205,230,.42);margin-bottom:10px}
+.docs-body p{margin-bottom:8px}
+.hit{position:relative;background:rgba(111,242,221,.14);border-left:2px solid #6ff2dd;margin-left:-9px;padding:4px 8px;border-radius:0 6px 6px 0;color:#f5fffc}
+.hit .badge{position:absolute;right:6px;top:-8px;font-family:-apple-system,sans-serif;font-size:7.5px;letter-spacing:.04em;color:#9ffcf0;background:rgba(11,18,29,.9);border:1px solid rgba(111,242,221,.3);border-radius:999px;padding:1px 6px}
+.reader-foot{margin-top:auto;padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:8px;font-family:-apple-system,sans-serif;font-size:9.5px;color:rgba(180,198,228,.45)}
+.reader-foot i{width:5px;height:5px;border-radius:50%;background:#6ff2dd;box-shadow:0 0 8px #6ff2dd}
+.chat{position:absolute;left:26px;bottom:22px;width:min(760px,calc(100vw - 664px));z-index:3}
+.dialogue{border-radius:20px;border:1px solid rgba(255,255,255,.17);border-left:3px solid #6ff2dd;background:rgba(12,17,29,.56);backdrop-filter:blur(24px) saturate(145%);padding:14px 18px;box-shadow:0 26px 64px -34px #000}
+.name{font-size:10px;letter-spacing:.16em;color:#6ff2dd;font-weight:800}
+.en{font-size:16px;line-height:1.55;margin-top:5px}.zh{font-size:11px;color:rgba(210,222,246,.62);margin-top:4px}
+.playbar{margin:14px auto 0;width:max-content;display:flex;align-items:center;gap:9px;padding:7px 12px;border-radius:999px;background:rgba(11,16,27,.52);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(22px)}
+.card{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:rgba(225,235,255,.75);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12)}
+.mic{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(120% 120% at 32% 24%,#e6fffa,#9cf8ea 35%,#6ff2dd 60%,#49c9ba);color:#06211d;box-shadow:0 16px 38px -12px rgba(111,242,221,.8)}
+.toplabel{position:absolute;right:40px;top:0;transform:translateY(-50%);font-size:8px;color:#9ffcf0;background:#0b111d;border:1px solid rgba(111,242,221,.3);border-radius:999px;padding:2px 7px}
+.legend{position:absolute;left:28px;top:92px;z-index:3;display:flex;flex-direction:column;gap:8px;font-size:10px;color:rgba(220,232,252,.6)}
+.legend b{color:#9ffcf0;font-weight:700}
+.legend div{display:flex;align-items:center;gap:7px}.legend i{width:5px;height:5px;border-radius:50%;background:#6ff2dd;box-shadow:0 0 8px #6ff2dd}
+.steps{display:flex;gap:8px;align-items:center;margin-top:4px;font-size:9px;color:rgba(190,207,235,.42)}
+</style></head><body><div class="stage"><div class="bg"></div>
+<div class="top"><div class="who"><div class="back">‹</div><div><div class="sub" style="letter-spacing:.16em;color:#6ff2dd">LONDON · 英式英语</div><h1>Elena <span class="live">LIVE</span></h1><div class="sub">伦敦 · 画廊策展人</div></div></div><div style="display:flex;align-items:center;gap:7px"><span class="mini on">● 实时语音</span><span class="mini">00:18</span></div></div>
+<div class="legend"><div><i></i><b>链接 / PDF 原文直读</b></div><div><i></i><b>句子级跟随</b></div><div><i></i><b>OCR 资料已校对</b></div></div>
+<div class="docs">
+  <div class="docs-head"><span class="orb">▤</span><div><div class="h-title">NEWS IN BRIEF</div><div class="h-sub">iS Clinical · 网页原文 · 12 段</div></div><div class="head-tools"><span class="mini on">跟随讲解</span><span class="mini">A−</span><span class="mini">A+</span><span class="mini">收起</span></div></div>
+  <div class="docs-body">
+    <div class="kicker">NEWS AND ANALYSIS · BUSINESS</div>
+    <h2>iS Clinical expands UK partner network</h2>
+    <div class="meta">来源：网页链接 · 已直接提取正文（未 OCR）</div>
+    <p>iS Clinical has expanded its UK partner network with ALTA Media. The Marylebone clinic will offer iS Clinical treatments, including its Fire &amp; Ice facial, alongside the brand's wider professional skincare portfolio.</p>
+    <p class="hit">BTL has established a dedicated laser division and announced EXOLASEONE, a new fused erbium laser system combining multiple wavelengths into a single beam.<span class="badge">正在讲解 · 第 2 段</span></p>
+    <p>Following an early-access programme, the platform is expected to launch globally in 2027, initially targeting aesthetics and dermatology.</p>
+    <p>Claudia McGloin Launches The Regenerative Expert Nurse. Based in Sligo, Ireland, McGloin has transitioned her practice away from traditional aesthetic medicine to focus on regenerative aesthetics.</p>
+  </div>
+  <div class="reader-foot"><i></i>跟随讲解已开启 · 当前句已自动定位并高亮</div>
+</div>
+<div class="chat"><div class="dialogue"><div class="name">ELENA · 正在讲解</div><div class="en">BTL just announced a new laser system. Notice how the sentence links “dedicated division” with “EXOLASEONE” — that's the key relationship here.</div><div class="zh">BTL 刚发布了一套新的激光系统。注意这句话把“dedicated division”和“EXOLASEONE”连在一起——这就是这里的关键关系。</div></div><div class="playbar"><span class="card">⌨</span><span class="card">◀</span><span class="card mic">🎙</span><span class="card">💡</span><span class="card">☎</span></div></div>
+</div></body></html>

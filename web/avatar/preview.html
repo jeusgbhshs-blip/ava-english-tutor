@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Ava 数字人 · 预览与验收台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g' cx='35%25' cy='30%25'%3E%3Cstop offset='0' stop-color='%23eafffb'/%3E%3Cstop offset='.55' stop-color='%235eead4'/%3E%3Cstop offset='1' stop-color='%230f766e'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='14' fill='url(%23g)'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="./avatar.css" data-ava-styles />
+<style>
+  /* ---------- 页面基础（仅预览页使用，不影响主应用） ---------- */
+  :root {
+    --bg-0: #05070e;
+    --bg-1: #0a1020;
+    --panel: rgba(17, 25, 44, 0.62);
+    --stroke: rgba(148, 163, 184, 0.16);
+    --text: #e9eefc;
+    --muted: #93a3c4;
+    --accent: #5eead4;
+    --accent-2: #a78bfa;
+    --warm: #ffb86b;
+    --ok: #4ade80;
+    --danger: #fb7185;
+    --font: -apple-system, "SF Pro Display", "PingFang SC", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100dvh;
+    background:
+      radial-gradient(120% 80% at 50% -10%, rgba(94, 234, 212, 0.1), transparent 55%),
+      radial-gradient(90% 60% at 100% 30%, rgba(167, 139, 250, 0.12), transparent 60%),
+      linear-gradient(180deg, #070b16 0%, #05070e 60%, #04060c 100%);
+    color: var(--text);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .pv-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 18px clamp(14px, 2.6vw, 34px) 26px;
+    gap: 16px;
+  }
+
+  /* ---------- 顶栏 ---------- */
+  .pv-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+    border-radius: 20px;
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  .pv-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .pv-logo {
+    width: 40px; height: 40px; flex: none; border-radius: 13px;
+    background: radial-gradient(circle at 32% 28%, #d9fff9, #5eead4 42%, #0f766e 100%);
+    box-shadow: 0 0 22px rgba(94, 234, 212, 0.5);
+    position: relative;
+  }
+  .pv-logo::after {
+    content: "";
+    position: absolute; inset: -5px; border-radius: 16px;
+    border: 1px solid rgba(94, 234, 212, 0.32);
+  }
+  .pv-title { font-size: 17px; font-weight: 700; letter-spacing: 0.02em; line-height: 1.2; }
+  .pv-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; margin-top: 2px; }
+  .pv-badges { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+  .pv-badge {
+    font-size: 11px; color: var(--muted); padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--stroke); background: rgba(8, 13, 26, 0.5); letter-spacing: 0.03em;
+  }
+  .pv-badge b { color: var(--accent); font-weight: 600; }
+  .pv-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ---------- 主布局 ---------- */
+  .pv-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 16px;
+    min-height: 0;
+  }
+
+  /* ---------- 舞台 ---------- */
+  .pv-stage-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 14px;
+    border-radius: 24px;
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  .pv-stage-top {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 2px 6px 12px;
+  }
+  .pv-stage-title { font-size: 12px; letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; }
+  .pv-stage-note { font-size: 11px; color: var(--muted); opacity: 0.75; margin-left: auto; }
+  .pv-stage {
+    position: relative;
+    flex: 1;
+    min-height: 480px;
+    height: min(72vh, 760px);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    box-shadow:
+      0 0 0 1px rgba(94, 234, 212, 0.05),
+      0 30px 80px rgba(0, 0, 0, 0.5),
+      inset 0 0 120px rgba(94, 234, 212, 0.03);
+  }
+  .pv-stage::before,
+  .pv-stage::after {
+    content: "";
+    position: absolute;
+    width: 46px; height: 46px;
+    border: 1px solid rgba(94, 234, 212, 0.32);
+    pointer-events: none;
+    z-index: 3;
+  }
+  .pv-stage::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
+  .pv-stage::after { bottom: 10px; right: 10px; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
+
+  .pv-readout {
+    display: flex; flex-wrap: wrap; gap: 6px 14px;
+    padding: 10px 8px 0; font-size: 11px; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .pv-readout b { color: var(--text); font-weight: 600; }
+  .pv-readout .pv-k { color: rgba(147, 163, 196, 0.75); }
+  .pv-readout .pv-v { color: var(--accent); }
+
+  /* ---------- 控制面板 ---------- */
+  .pv-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    max-height: min(84vh, 940px);
+    overflow: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+  }
+  .pv-controls::-webkit-scrollbar { width: 6px; }
+  .pv-controls::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.22); border-radius: 3px; }
+
+  .pv-panel {
+    padding: 14px;
+    border-radius: 20px;
+    background: var(--panel);
+    border: 1px solid var(--stroke);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  .pv-panel h2 {
+    display: flex; align-items: center; gap: 8px;
+    margin: 0 0 10px; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  }
+  .pv-panel h2::before {
+    content: ""; width: 3px; height: 12px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    box-shadow: 0 0 10px rgba(94, 234, 212, 0.4);
+  }
+  .pv-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+
+  .pv-btn {
+    appearance: none;
+    border: 1px solid var(--stroke);
+    background: rgba(8, 13, 26, 0.55);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    padding: 8px 12px;
+    border-radius: 11px;
+    cursor: pointer;
+    transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+    user-select: none;
+  }
+  .pv-btn:hover {
+    border-color: rgba(94, 234, 212, 0.4);
+    background: rgba(94, 234, 212, 0.09);
+    transform: translateY(-1px);
+  }
+  .pv-btn:active { transform: translateY(0) scale(0.985); }
+  .pv-btn.is-active {
+    border-color: rgba(94, 234, 212, 0.6);
+    background: linear-gradient(160deg, rgba(94, 234, 212, 0.22), rgba(167, 139, 250, 0.14));
+    color: #eafffb;
+    box-shadow: 0 0 0 1px rgba(94, 234, 212, 0.12), 0 10px 24px rgba(94, 234, 212, 0.12);
+  }
+  .pv-btn.is-primary {
+    border-color: rgba(94, 234, 212, 0.45);
+    background: linear-gradient(160deg, rgba(94, 234, 212, 0.2), rgba(15, 118, 110, 0.22));
+  }
+  .pv-btn.is-warm { border-color: rgba(255, 184, 107, 0.4); }
+  .pv-btn.is-warm:hover { background: rgba(255, 184, 107, 0.12); border-color: rgba(255, 184, 107, 0.6); }
+  .pv-btn.is-danger { border-color: rgba(251, 113, 133, 0.35); }
+  .pv-btn.is-danger:hover { background: rgba(251, 113, 133, 0.1); border-color: rgba(251, 113, 133, 0.55); }
+  .pv-btn.vp { min-width: 62px; font-variant-numeric: tabular-nums; }
+  .pv-btn small { display: block; font-size: 9px; color: var(--muted); letter-spacing: 0.08em; margin-top: 1px; }
+
+  .pv-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .pv-row:first-of-type { margin-top: 0; }
+  .pv-label { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; min-width: 52px; }
+  .pv-input, .pv-select {
+    flex: 1;
+    min-width: 110px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--stroke);
+    background: rgba(8, 13, 26, 0.6);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  }
+  .pv-input:focus, .pv-select:focus {
+    border-color: rgba(94, 234, 212, 0.5);
+    box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.1);
+  }
+  .pv-select { flex: none; width: 92px; min-width: 92px; }
+  .pv-slider {
+    -webkit-appearance: none; appearance: none;
+    flex: 1; min-width: 120px; height: 6px; border-radius: 999px;
+    background: linear-gradient(90deg, rgba(94, 234, 212, 0.65), rgba(167, 139, 250, 0.55));
+    outline: none; cursor: pointer;
+  }
+  .pv-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #eafffb, #5eead4 60%, #0f766e);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 12px rgba(94, 234, 212, 0.6);
+  }
+  .pv-slider-val { min-width: 38px; text-align: right; font-size: 11px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .pv-switch { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
+  .pv-switch input { display: none; }
+  .pv-switch i {
+    width: 34px; height: 20px; border-radius: 999px; background: rgba(148, 163, 184, 0.18);
+    border: 1px solid var(--stroke); position: relative; transition: background 0.2s ease, border-color 0.2s ease; flex: none;
+  }
+  .pv-switch i::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+    background: #c8d2e6; transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease;
+  }
+  .pv-switch input:checked + i { background: rgba(94, 234, 212, 0.28); border-color: rgba(94, 234, 212, 0.5); }
+  .pv-switch input:checked + i::after { transform: translateX(14px); background: #5eead4; }
+
+  .pv-note { margin: 8px 0 0; font-size: 10.5px; line-height: 1.55; color: rgba(147, 163, 196, 0.72); }
+  .pv-note code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px; color: var(--accent); background: rgba(94, 234, 212, 0.08);
+    padding: 1px 5px; border-radius: 5px;
+  }
+
+  /* ---------- 日志 ---------- */
+  .pv-log-panel { flex: none; }
+  .pv-log {
+    margin: 0; padding: 10px; min-height: 92px; max-height: 168px; overflow: auto;
+    border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(4, 7, 14, 0.55);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px; line-height: 1.65; color: rgba(198, 212, 236, 0.82);
+    scrollbar-width: thin;
+  }
+  .pv-log-line { white-space: pre-wrap; word-break: break-word; }
+  .pv-log-line .t { color: rgba(147, 163, 196, 0.55); }
+  .pv-log-line .a { color: var(--accent); }
+  .pv-log-line .w { color: var(--warm); }
+  .pv-log-line .e { color: var(--danger); }
+
+  /* ---------- 错误横幅 / 自检 ---------- */
+  .pv-error {
+    padding: 10px 14px; border-radius: 14px;
+    border: 1px solid rgba(251, 113, 133, 0.4);
+    background: rgba(76, 5, 25, 0.5);
+    color: #ffd7de; font-size: 12px; font-family: ui-monospace, Menlo, monospace;
+    white-space: pre-wrap;
+  }
+  .pv-selftest {
+    display: none;
+    white-space: pre-wrap;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 11px; line-height: 1.6;
+    color: rgba(198, 212, 236, 0.9);
+    background: rgba(4, 7, 14, 0.6);
+    border: 1px solid var(--stroke);
+    border-radius: 12px; padding: 10px; margin-top: 10px;
+    max-height: 220px; overflow: auto;
+  }
+  .pv-selftest b { color: var(--accent); }
+  .pv-selftest .fail { color: var(--danger); }
+
+  .pv-footer {
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+    font-size: 11px; color: var(--muted); padding: 0 6px;
+  }
+  .pv-footer .dot { width: 3px; height: 3px; border-radius: 50%; background: rgba(147, 163, 196, 0.5); }
+  .pv-kbd {
+    font-family: ui-monospace, Menlo, monospace; font-size: 10px;
+    border: 1px solid var(--stroke); border-bottom-width: 2px; border-radius: 5px;
+    padding: 1px 5px; color: var(--text); background: rgba(8, 13, 26, 0.55);
+  }
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width: 1080px) {
+    .pv-main { grid-template-columns: minmax(0, 1fr) 340px; }
+  }
+  @media (max-width: 920px) {
+    .pv-shell { padding: 12px 12px 20px; gap: 12px; }
+    .pv-main { grid-template-columns: minmax(0, 1fr); }
+    .pv-controls { max-height: none; overflow: visible; }
+    .pv-stage-card { padding: 10px; }
+    .pv-stage { height: 470px; min-height: 400px; }
+    .pv-stage-note { display: none; }
+    .pv-head { padding: 10px 12px; gap: 10px; }
+    .pv-badges { display: none; }
+    .pv-title { font-size: 15px; }
+    .pv-sub { font-size: 10px; }
+  }
+  @media (max-width: 460px) {
+    .pv-stage { height: 420px; min-height: 360px; }
+    .pv-head-actions { width: 100%; }
+    .pv-head-actions .pv-btn { flex: 1; text-align: center; }
+    .pv-logo { width: 34px; height: 34px; border-radius: 11px; }
+  }
+</style>
+</head>
+<body>
+<div class="pv-shell">
+  <header class="pv-head">
+    <div class="pv-brand">
+      <div class="pv-logo" aria-hidden="true"></div>
+      <div>
+        <div class="pv-title">Ava · 数字人预览与验收台</div>
+        <div class="pv-sub">AVATAR CONTRACT v1.4 · teal-violet · pure inline SVG</div>
+      </div>
+    </div>
+    <div class="pv-badges">
+      <span class="pv-badge">状态 <b id="badge-state">idle</b></span>
+      <span class="pv-badge">表情 <b id="badge-emotion">neutral</b></span>
+      <span class="pv-badge">口型 <b id="badge-viseme">rest</b></span>
+    </div>
+    <div class="pv-head-actions">
+      <button class="pv-btn is-primary" data-action="tour">▶ 自动巡演</button>
+      <button class="pv-btn" data-action="selftest">自检</button>
+      <a class="pv-btn" href="/" title="回到主应用">主应用</a>
+    </div>
+  </header>
+
+  <div id="page-error" class="pv-error" hidden></div>
+
+  <main class="pv-main">
+    <section class="pv-stage-card">
+      <div class="pv-stage-top">
+        <span class="pv-stage-title">Avatar Stage</span>
+        <span class="pv-stage-note">WebGL-free · SVG + CSS · 自适应容器（ResizeObserver）</span>
+      </div>
+      <div id="avatar-stage" class="pv-stage"></div>
+      <div class="pv-readout" id="readout">
+        <span><span class="pv-k">state</span> <b id="ro-state">idle</b></span>
+        <span><span class="pv-k">emotion</span> <b id="ro-emotion">neutral</b></span>
+        <span><span class="pv-k">viseme</span> <b id="ro-viseme">rest</b></span>
+        <span><span class="pv-k">speaking</span> <b id="ro-speaking">false</b></span>
+        <span><span class="pv-k">mic</span> <b id="ro-mic">0.00</b></span>
+        <span><span class="pv-k">speech</span> <b id="ro-speech">0.00</b></span>
+        <span><span class="pv-k">size</span> <b id="ro-size">--</b></span>
+      </div>
+    </section>
+
+    <aside class="pv-controls" id="controls">
+      <section class="pv-panel">
+        <h2>状态 setState()</h2>
+        <div class="pv-grid" id="state-btns">
+          <button class="pv-btn" data-state="idle">idle<small>待机/呼吸</small></button>
+          <button class="pv-btn" data-state="listening">listening<small>前倾/聆听</small></button>
+          <button class="pv-btn" data-state="thinking">thinking<small>思考光环</small></button>
+          <button class="pv-btn" data-state="speaking">speaking<small>口型/晃头</small></button>
+          <button class="pv-btn is-warm" data-state="celebrate">celebrate<small>星光纸屑</small></button>
+          <button class="pv-btn" data-state="sad">sad<small>低落</small></button>
+          <button class="pv-btn" data-state="encouraging">encouraging<small>鼓励</small></button>
+        </div>
+      </section>
+
+      <section class="pv-panel">
+        <h2>表情 setEmotion()</h2>
+        <div class="pv-grid" id="emotion-btns">
+          <button class="pv-btn" data-emotion="neutral">neutral</button>
+          <button class="pv-btn" data-emotion="happy">happy</button>
+          <button class="pv-btn" data-emotion="proud">proud</button>
+          <button class="pv-btn" data-emotion="curious">curious</button>
+          <button class="pv-btn" data-emotion="thinking">thinking</button>
+          <button class="pv-btn" data-emotion="encouraging">encouraging</button>
+          <button class="pv-btn" data-emotion="surprised">surprised</button>
+        </div>
+        <p class="pv-note">表情会覆盖状态默认表情；切换状态会重置。难过/惊喜等表情会改变眉毛、眼神与嘴型。</p>
+      </section>
+
+      <section class="pv-panel">
+        <h2>口型 viseme（6 种）</h2>
+        <div class="pv-grid" id="viseme-btns">
+          <button class="pv-btn vp" data-viseme="rest">rest<small>闭合</small></button>
+          <button class="pv-btn vp" data-viseme="aa">aa<small>啊</small></button>
+          <button class="pv-btn vp" data-viseme="ee">ee<small>衣</small></button>
+          <button class="pv-btn vp" data-viseme="o">o<small>哦</small></button>
+          <button class="pv-btn vp" data-viseme="u">u<small>乌</small></button>
+          <button class="pv-btn vp" data-viseme="mf">m-f<small>闭合</small></button>
+        </div>
+        <p class="pv-note">此区块直接把口型形状冻结展示；真实对话中由 <code>beginSpeech</code> / <code>wordBoundary</code> 驱动。</p>
+      </section>
+
+      <section class="pv-panel">
+        <h2>朗读 / 口型驱动</h2>
+        <div class="pv-row">
+          <input class="pv-input" id="speech-text" value="Hello! Welcome back to our English class. I'm so glad to see you today." spellcheck="false" />
+        </div>
+        <div class="pv-grid" style="margin-top:10px">
+          <button class="pv-btn is-primary" data-action="speak-sim">模拟 TTS 朗读</button>
+          <button class="pv-btn is-danger" data-action="speech-stop">endSpeech()</button>
+          <button class="pv-btn" data-action="speak-loop">循环口型（无边界）</button>
+          <button class="pv-btn" data-action="boundary-step">手动 wordBoundary</button>
+        </div>
+        <p class="pv-note">模拟 TTS：<code>beginSpeech</code> → 逐词 <code>wordBoundary</code> → <code>endSpeech</code>；「循环口型」不提供任何边界回调，验证按音节估算。</p>
+      </section>
+
+      <section class="pv-panel">
+        <h2>麦克风电平 setMicLevel()</h2>
+        <div class="pv-row">
+          <span class="pv-label">level</span>
+          <input id="mic-slider" class="pv-slider" type="range" min="0" max="1" step="0.01" value="0.35" />
+          <span class="pv-slider-val" id="mic-val">0.35</span>
+        </div>
+        <div class="pv-grid" style="margin-top:10px">
+          <button class="pv-btn" data-action="mic-live">模拟说话波形</button>
+          <button class="pv-btn" data-action="mic-zero">归零</button>
+        </div>
+        <p class="pv-note">仅在 <code>listening</code> 状态显示聆听光环与波形条；强度由电平驱动。</p>
+      </section>
+
+      <section class="pv-panel">
+        <h2>外部振幅 setSpeechLevel() <span class="pv-badge" style="margin-left:auto;font-size:9px">v1.4</span></h2>
+        <div class="pv-row">
+          <span class="pv-label">amplitude</span>
+          <input id="speech-slider" class="pv-slider" type="range" min="0" max="1" step="0.01" value="0" />
+          <span class="pv-slider-val" id="speech-val">0.00</span>
+        </div>
+        <div class="pv-grid" style="margin-top:10px">
+          <button class="pv-btn is-primary" data-action="speech-feed">模拟流式振幅</button>
+          <button class="pv-btn" data-action="speech-hold">保持当前振幅</button>
+          <button class="pv-btn is-danger" data-action="speech-reset">endSpeech() 复位</button>
+        </div>
+        <p class="pv-note">豆包 PCM 播放时按音频帧调用 <code>setSpeechLevel(0..1)</code>，优先于 beginSpeech 的音节估算；450ms 无新调用自动释放，endSpeech 后复位。拖动滑杆即实时驱动口型开合。</p>
+      </section>
+
+      <section class="pv-panel">
+        <h2>动作 / 设置</h2>
+        <div class="pv-grid">
+          <button class="pv-btn is-warm" data-action="wave">wave() 挥手</button>
+          <button class="pv-btn" data-action="nod">nod() 点头</button>
+          <button class="pv-btn" data-action="blink">blink() 眨眼</button>
+        </div>
+        <div class="pv-row" style="margin-top:12px">
+          <span class="pv-label">名字</span>
+          <input class="pv-input" id="teacher-name" value="Ava" maxlength="20" spellcheck="false" />
+        </div>
+        <div class="pv-row">
+          <span class="pv-label">CEFR</span>
+          <select class="pv-select" id="level-select">
+            <option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option>
+          </select>
+          <label class="pv-switch"><input type="checkbox" id="hud-toggle" checked /><i></i> HUD</label>
+          <label class="pv-switch"><input type="checkbox" id="rm-toggle" /><i></i> 减弱动效</label>
+        </div>
+        <p class="pv-note">键盘：<span class="pv-kbd">1</span>–<span class="pv-kbd">7</span> 状态 · <span class="pv-kbd">Q W E R T Y U</span> 表情 · <span class="pv-kbd">B</span> 眨眼 · <span class="pv-kbd">N</span> 点头 · <span class="pv-kbd">V</span> 挥手</p>
+      </section>
+
+      <section class="pv-panel pv-log-panel">
+        <h2>调用日志</h2>
+        <pre class="pv-log" id="log"></pre>
+      </section>
+
+      <pre class="pv-selftest" id="selftest-out"></pre>
+    </aside>
+  </main>
+
+  <footer class="pv-footer">
+    <span>Ava Avatar v<span id="ver">-</span></span><span class="dot"></span>
+    <span>静态资源：<a href="/avatar/avatar.js">avatar.js</a> · <a href="/avatar/avatar.css">avatar.css</a> · <a href="/avatar/preview.html">preview.html</a></span>
+    <span class="dot"></span>
+    <span>截图参数：<code style="font-family:ui-monospace,Menlo,monospace">?state=thinking&amp;emotion=curious&amp;mic=0.7&amp;hud=1&amp;reduced=0</code></span>
+  </footer>
+</div>
+
+<script type="module">
+  import { mountAvatar, AVATAR_VERSION } from './avatar.js';
+
+  /* ---------------- 页面错误捕获（便于 headless 验收） ---------------- */
+  const errBox = document.getElementById('page-error');
+  const pageErrors = [];
+  function reportError(kind, message) {
+    pageErrors.push({ kind, message });
+    errBox.hidden = false;
+    errBox.textContent = '⚠ ' + kind + ': ' + message;
+    document.title = 'AVA-PREVIEW-ERROR ' + kind;
+    const logEl = document.getElementById('log');
+    if (logEl) addLog('错误', kind + ': ' + message, 'e');
+  }
+  window.__AVA_PAGE_ERRORS__ = pageErrors;
+  window.addEventListener('error', (e) => reportError('error', (e && e.message) || String(e)));
+  window.addEventListener('unhandledrejection', (e) => {
+    const r = e && e.reason;
+    reportError('unhandledrejection', (r && r.stack) || String(r));
+  });
+
+  /* ---------------- 挂载 ---------------- */
+  const stage = document.getElementById('avatar-stage');
+  const avatar = mountAvatar(stage, { teacherName: 'Ava', level: 'A2', theme: 'teal-violet' });
+  window.avatar = avatar;
+  document.getElementById('ver').textContent = AVATAR_VERSION;
+
+  /* ---------------- 工具 ---------------- */
+  const $ = (sel) => document.querySelector(sel);
+  const logEl = $('#log');
+  const MAX_LOG = 40;
+  function addLog(kind, text, cls = '') {
+    const line = document.createElement('div');
+    line.className = 'pv-log-line';
+    const t = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    const safeText = String(text).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    line.innerHTML = '<span class="t">' + t + '</span> <span class="a">' + kind + '</span> ' +
+      '<span class="' + cls + '">' + safeText + '</span>';
+    logEl.appendChild(line);
+    while (logEl.children.length > MAX_LOG) logEl.removeChild(logEl.firstChild);
+    logEl.scrollTop = logEl.scrollHeight;
+    logEl.dataset.count = String(logEl.children.length);
+  }
+
+  const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+  const raf = () => new Promise((res) => setTimeout(res, 60));
+  const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+
+  /* ---------------- 状态 / 表情按钮 ---------------- */
+  document.querySelectorAll('[data-state]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const s = btn.dataset.state;
+      stopAllSims();
+      avatar.setState(s);
+      addLog('setState', '"' + s + '"');
+    });
+  });
+  document.querySelectorAll('[data-emotion]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const e = btn.dataset.emotion;
+      avatar.setEmotion(e);
+      addLog('setEmotion', '"' + e + '"');
+    });
+  });
+  document.querySelectorAll('[data-viseme]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      stopAllSims();
+      avatar.setViseme(btn.dataset.viseme);
+      addLog('setViseme', '"' + btn.dataset.viseme + '"', 'w');
+    });
+  });
+
+  /* ---------------- 朗读模拟 ---------------- */
+  let simToken = 0;
+  let micRaf = 0;
+  let tourTimer = 0;
+
+  function stopAllSims() {
+    simToken++;
+    if (micRaf) cancelAnimationFrame(micRaf);
+    micRaf = 0;
+    clearTimeout(tourTimer);
+    tourTimer = 0;
+    document.querySelector('[data-action="tour"]').classList.remove('is-active');
+    document.querySelector('[data-action="mic-live"]').classList.remove('is-active');
+    document.querySelector('[data-action="speak-loop"]').classList.remove('is-active');
+    document.querySelector('[data-action="speak-sim"]').classList.remove('is-active');
+    if (speechFeedTimer) { clearInterval(speechFeedTimer); speechFeedTimer = 0; }
+    speechFeedMode = '';
+    document.querySelectorAll('[data-action="speech-feed"],[data-action="speech-hold"]').forEach((b) => b.classList.remove('is-active'));
+  }
+
+  async function simulateSpeech() {
+    stopAllSims();
+    const token = ++simToken;
+    const text = ($('#speech-text').value || '').trim() || 'Hello! Welcome back to class.';
+    const words = text.match(/\S+/g) || [];
+    const per = 400;
+    avatar.endSpeech();
+    avatar.beginSpeech({ text, durationMs: Math.max(600, words.length * per) });
+    addLog('beginSpeech', 'text="' + (text.length > 36 ? text.slice(0, 36) + '…' : text) + '" · ' + words.length + ' words');
+    let cursor = 0;
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i];
+      const idx = text.indexOf(w, cursor);
+      if (idx >= 0) cursor = idx + w.length;
+      await sleep(per);
+      if (token !== simToken) return;
+      avatar.wordBoundary({ word: w, charIndex: Math.max(0, idx), elapsedMs: i * per });
+      addLog('wordBoundary', 'word="' + w + '" charIndex=' + Math.max(0, idx), 'w');
+    }
+    await sleep(per);
+    if (token !== simToken) return;
+    avatar.endSpeech();
+    addLog('endSpeech', '朗读结束 → 状态 idle');
+  }
+
+  let loopTimer = 0;
+  function loopMouth() {
+    stopAllSims();
+    const btn = document.querySelector('[data-action="speak-loop"]');
+    btn.classList.add('is-active');
+    avatar.endSpeech();
+    avatar.beginSpeech({ text: '' });
+    addLog('beginSpeech', 'text="" · 无任何 wordBoundary 回调，验证按音节估算');
+    const pattern = ['aa', 'ee', 'o', 'u', 'mf', 'ee'];
+    let i = 0;
+    loopTimer = setInterval(() => {
+      if (!avatar.speaking) { clearInterval(loopTimer); btn.classList.remove('is-active'); return; }
+      // 只记录，真实口型由内部循环产生
+      if (i % 12 === 0) addLog('lip-sync', '按音节估算中…（无边界回调）', 'w');
+      i++;
+    }, 640);
+  }
+
+  let manualCursor = 0;
+  function manualBoundary() {
+    const text = ($('#speech-text').value || '').trim() || 'Hello! Welcome back to class.';
+    if (!avatar.speaking) {
+      stopAllSims();
+      avatar.beginSpeech({ text });
+      addLog('beginSpeech', '手动边界模式已开始');
+      manualCursor = 0;
+    }
+    const words = text.match(/\S+/g) || [];
+    const w = words[manualCursor % words.length];
+    const idx = text.indexOf(w, manualCursor === 0 ? 0 : 0);
+    avatar.wordBoundary({ word: w, charIndex: Math.max(0, idx), elapsedMs: manualCursor * 380 });
+    addLog('wordBoundary', 'word="' + w + '"（手动重同步）', 'w');
+    manualCursor++;
+  }
+
+  /* ---------------- 麦克风 ---------------- */
+  const micSlider = $('#mic-slider');
+  const micVal = $('#mic-val');
+  function applyMicSlider() {
+    const v = parseFloat(micSlider.value) || 0;
+    micVal.textContent = v.toFixed(2);
+    avatar.setMicLevel(v);
+    addLog('setMicLevel', v.toFixed(2), 'w');
+  }
+  micSlider.addEventListener('input', () => {
+    micVal.textContent = (parseFloat(micSlider.value) || 0).toFixed(2);
+    avatar.setMicLevel(parseFloat(micSlider.value) || 0);
+  });
+  micSlider.addEventListener('change', applyMicSlider);
+
+  function liveMic() {
+    stopAllSims();
+    const btn = document.querySelector('[data-action="mic-live"]');
+    btn.classList.add('is-active');
+    if (avatar?.state !== 'listening') avatar.setState('listening');
+    const t0 = performance.now();
+    addLog('setState', '"listening" + 模拟麦克风波形');
+    const tick = () => {
+      const t = (performance.now() - t0) / 1000;
+      const v = clamp(0.25 + Math.abs(Math.sin(t * 2.1)) * 0.5 + Math.abs(Math.sin(t * 7.3)) * 0.22, 0, 1);
+      avatar.setMicLevel(v);
+      micSlider.value = v.toFixed(2);
+      micVal.textContent = v.toFixed(2);
+      micRaf = requestAnimationFrame(tick);
+    };
+    micRaf = requestAnimationFrame(tick);
+  }
+
+  /* ---------------- 外部实时振幅（v1.4 setSpeechLevel） ---------------- */
+  const speechSlider = $('#speech-slider');
+  const speechVal = $('#speech-val');
+  let speechFeedTimer = 0;
+  let speechFeedMode = '';
+  function setSpeechDisplay(v) { if (speechVal) speechVal.textContent = (Number(v) || 0).toFixed(2); }
+  function stopSpeechFeed() {
+    if (speechFeedTimer) { clearInterval(speechFeedTimer); speechFeedTimer = 0; }
+    speechFeedMode = '';
+    document.querySelectorAll('[data-action="speech-feed"],[data-action="speech-hold"]').forEach((b) => b.classList.remove('is-active'));
+  }
+  function feedSpeechHold(v) {
+    stopAllSims();
+    speechFeedMode = 'hold';
+    if (speechSlider) speechSlider.value = String(v);
+    setSpeechDisplay(v);
+    avatar.setSpeechLevel(v);
+    speechFeedTimer = setInterval(() => avatar.setSpeechLevel(v), 120);
+    document.querySelector('[data-action="speech-hold"]').classList.add('is-active');
+    addLog('setSpeechLevel', v.toFixed(2) + '（保持外部振幅）', 'w');
+  }
+  function feedSpeechAuto() {
+    stopAllSims();
+    speechFeedMode = 'auto';
+    const t0 = performance.now();
+    document.querySelector('[data-action="speech-feed"]').classList.add('is-active');
+    addLog('setSpeechLevel', '模拟豆包流式 PCM 振幅…', 'w');
+    speechFeedTimer = setInterval(() => {
+      const t = (performance.now() - t0) / 1000;
+      const v = clamp(0.18 + Math.abs(Math.sin(t * 3.1)) * 0.55 + Math.abs(Math.sin(t * 9.7)) * 0.26, 0, 1);
+      avatar.setSpeechLevel(v);
+      if (speechSlider) speechSlider.value = v.toFixed(2);
+      setSpeechDisplay(v);
+    }, 55);
+  }
+  if (speechSlider) {
+    speechSlider.addEventListener('input', () => {
+      stopSpeechFeed();
+      const v = clamp(parseFloat(speechSlider.value) || 0, 0, 1);
+      setSpeechDisplay(v);
+      avatar.setSpeechLevel(v);
+    });
+    speechSlider.addEventListener('change', () => {
+      addLog('setSpeechLevel', (parseFloat(speechSlider.value) || 0).toFixed(2), 'w');
+    });
+  }
+  document.querySelector('[data-action="speech-feed"]').addEventListener('click', feedSpeechAuto);
+  document.querySelector('[data-action="speech-hold"]').addEventListener('click', () => {
+    const v = clamp(parseFloat(speechSlider.value) || 0.7, 0.05, 1);
+    feedSpeechHold(v);
+  });
+  document.querySelector('[data-action="speech-reset"]').addEventListener('click', () => {
+    stopAllSims();
+    avatar.endSpeech();
+    if (speechSlider) speechSlider.value = '0';
+    setSpeechDisplay(0);
+    addLog('endSpeech', '外部振幅复位 → 口型闭合');
+  });
+
+  /* ---------------- 自动巡演 ---------------- */
+  const tourSteps = [
+    { label: 'idle 待机', run: () => { avatar.setState('idle'); avatar.setEmotion('neutral'); } },
+    { label: 'idle 眨眼', run: () => avatar.blink() },
+    { label: 'idle 挥手', run: () => avatar.wave() },
+    { label: 'listening 聆听（高电平）', run: () => { avatar.setState('listening'); avatar.setMicLevel(0.82); } },
+    { label: 'thinking 思考', run: () => { avatar.setState('thinking'); avatar.setMicLevel(0.1); } },
+    { label: 'speaking 朗读', run: () => { avatar.setState('speaking'); avatar.beginSpeech({ text: 'That is a wonderful answer! Let us try one more time.' }); } },
+    { label: 'encouraging 鼓励', run: () => { avatar.endSpeech(); avatar.setState('encouraging'); } },
+    { label: 'celebrate 庆祝', run: () => avatar.setState('celebrate') },
+    { label: 'surprised 惊喜', run: () => { avatar.setState('idle'); avatar.setEmotion('surprised'); } },
+    { label: 'curious 好奇', run: () => avatar.setEmotion('curious') },
+    { label: 'proud 骄傲', run: () => avatar.setEmotion('proud') },
+    { label: 'sad 低落', run: () => { avatar.setState('sad'); avatar.setMicLevel(0); } },
+  ];
+
+  function startTour() {
+    stopAllSims();
+    const btn = document.querySelector('[data-action="tour"]');
+    btn.classList.add('is-active');
+    let i = 0;
+    addLog('自动巡演', '开始');
+    const step = () => {
+      if (i >= tourSteps.length) {
+        btn.classList.remove('is-active');
+        avatar.setState('idle');
+        avatar.setEmotion('neutral');
+        avatar.endSpeech();
+        addLog('自动巡演', '结束 → idle');
+        return;
+      }
+      const s = tourSteps[i++];
+      try { s.run(); } catch (err) { reportError('tour', err.message); }
+      addLog('巡演', s.label);
+      tourTimer = setTimeout(step, 2100);
+    };
+    step();
+  }
+
+  /* ---------------- 动作 ---------------- */
+  document.querySelector('[data-action="wave"]').addEventListener('click', () => { avatar.wave(); addLog('wave', '挥手 2.4s'); });
+  document.querySelector('[data-action="nod"]').addEventListener('click', () => { avatar.nod(); addLog('nod', '点头 0.9s'); });
+  document.querySelector('[data-action="blink"]').addEventListener('click', () => { avatar.blink(); addLog('blink', '眨眼'); });
+  document.querySelector('[data-action="speak-sim"]').addEventListener('click', simulateSpeech);
+  document.querySelector('[data-action="speech-stop"]').addEventListener('click', () => {
+    stopAllSims(); avatar.endSpeech(); addLog('endSpeech', '手动结束');
+  });
+  document.querySelector('[data-action="speak-loop"]').addEventListener('click', loopMouth);
+  document.querySelector('[data-action="boundary-step"]').addEventListener('click', manualBoundary);
+  document.querySelector('[data-action="mic-live"]').addEventListener('click', liveMic);
+  document.querySelector('[data-action="mic-zero"]').addEventListener('click', () => {
+    stopAllSims(); avatar.setMicLevel(0); micSlider.value = '0'; micVal.textContent = '0.00'; addLog('setMicLevel', '0');
+  });
+  document.querySelector('[data-action="tour"]').addEventListener('click', () => {
+    if (document.querySelector('[data-action="tour"]').classList.contains('is-active')) {
+      stopAllSims();
+      avatar.setState('idle');
+      addLog('自动巡演', '已停止');
+    } else {
+      startTour();
+    }
+  });
+
+  /* ---------------- 设置 ---------------- */
+  $('#teacher-name').addEventListener('input', (e) => {
+    avatar.setTeacherName(e.target.value);
+    addLog('setTeacherName', JSON.stringify(e.target.value));
+  });
+  $('#level-select').addEventListener('change', (e) => {
+    avatar.setLevel(e.target.value);
+    addLog('setLevel', '"' + e.target.value + '"');
+  });
+  $('#hud-toggle').addEventListener('change', (e) => {
+    avatar.setHudVisible(e.target.checked);
+    addLog('HUD', e.target.checked ? '显示' : '隐藏');
+  });
+  $('#rm-toggle').addEventListener('change', (e) => {
+    avatar.setReducedMotion(e.target.checked);
+    addLog('reduced-motion', e.target.checked ? '开（停止持续动画）' : '关');
+  });
+
+  /* ---------------- 键盘快捷键 ---------------- */
+  window.addEventListener('keydown', (e) => {
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    const stateKeys = ['idle', 'listening', 'thinking', 'speaking', 'celebrate', 'sad', 'encouraging'];
+    const emotionKeys = ['neutral', 'happy', 'proud', 'curious', 'thinking', 'encouraging', 'surprised'];
+    if (e.key >= '1' && e.key <= '7') {
+      const s = stateKeys[Number(e.key) - 1];
+      stopAllSims(); avatar.setState(s); addLog('setState', '"' + s + '"（键盘）');
+    } else if ('qwertyu'.includes(e.key.toLowerCase())) {
+      const idx = 'qwertyu'.indexOf(e.key.toLowerCase());
+      const em = emotionKeys[idx];
+      if (em) { avatar.setEmotion(em); addLog('setEmotion', '"' + em + '"（键盘）'); }
+    } else if (e.key.toLowerCase() === 'b') { avatar.blink(); }
+    else if (e.key.toLowerCase() === 'n') { avatar.nod(); }
+    else if (e.key.toLowerCase() === 'v') { avatar.wave(); }
+  });
+
+  /* ---------------- 实时读数（250ms 轮询，供 QA 校对） ---------------- */
+  const ro = {
+    state: $('#ro-state'), emotion: $('#ro-emotion'), viseme: $('#ro-viseme'),
+    speaking: $('#ro-speaking'), mic: $('#ro-mic'), speech: $('#ro-speech'), size: $('#ro-size'),
+    bState: $('#badge-state'), bEmotion: $('#badge-emotion'), bViseme: $('#badge-viseme'),
+  };
+  let lastState = '';
+  let lastEmotion = '';
+  setInterval(() => {
+    const ds = avatar.el.dataset;
+    ro.state.textContent = ds.state;
+    ro.emotion.textContent = ds.emotion;
+    ro.viseme.textContent = ds.viseme;
+    ro.speaking.textContent = ds.speaking === '1' ? 'true' : 'false';
+    ro.mic.textContent = (parseFloat(micVal.textContent) || 0).toFixed(2);
+    ro.speech.textContent = (typeof avatar.speechLevel === 'number' ? avatar.speechLevel : 0).toFixed(2);
+    ro.size.textContent = ds.size || '--';
+    ro.bState.textContent = ds.state;
+    ro.bEmotion.textContent = ds.emotion;
+    ro.bViseme.textContent = ds.viseme;
+    document.querySelectorAll('[data-state]').forEach((b) => b.classList.toggle('is-active', b.dataset.state === ds.state));
+    if (ds.emotion !== lastEmotion) {
+      document.querySelectorAll('[data-emotion]').forEach((b) => b.classList.toggle('is-active', b.dataset.emotion === ds.emotion));
+      lastEmotion = ds.emotion;
+    }
+    lastState = ds.state;
+    if (window.matchMedia) {
+      const mm = window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (mm.matches && !$('#rm-toggle').checked) {
+        $('#rm-toggle').checked = true;
+        avatar.setReducedMotion(true);
+      }
+    }
+  }, 250);
+
+  /* ---------------- URL 参数预置（便于自动截图） ---------------- */
+  (function applyUrlPreset() {
+    const p = new URLSearchParams(location.search);
+    const state = p.get('state');
+    const emotion = p.get('emotion');
+    const mic = p.get('mic');
+    const hud = p.get('hud');
+    const reduced = p.get('reduced');
+    const viseme = p.get('viseme');
+    if (state) { avatar.setState(state); addLog('预置', 'state=' + state); }
+    if (emotion) { avatar.setEmotion(emotion); addLog('预置', 'emotion=' + emotion); }
+    if (mic != null && mic !== '') { avatar.setMicLevel(parseFloat(mic) || 0); micSlider.value = mic; micVal.textContent = (parseFloat(mic) || 0).toFixed(2); }
+    if (hud === '0') { avatar.setHudVisible(false); $('#hud-toggle').checked = false; }
+    if (reduced === '1') { avatar.setReducedMotion(true); $('#rm-toggle').checked = true; }
+    if (viseme) { avatar.setViseme(viseme); }
+    if (p.get('speech') === '1') {
+      avatar.beginSpeech({ text: p.get('text') || 'Hello! I am Ava. Nice to meet you.' });
+    }
+    if (p.get('celebrate') === '1') { avatar.setState('celebrate'); }
+    const speechLevel = p.get('speechLevel');
+    if (speechLevel != null && speechLevel !== '') {
+      const v = clamp(parseFloat(speechLevel) || 0, 0, 1);
+      feedSpeechHold(v);
+      addLog('预置', 'speechLevel=' + v.toFixed(2) + '（外部振幅）');
+    }
+    if (p.get('external') === '1') feedSpeechAuto();
+  })();
+
+  /* ---------------- 自检 ---------------- */
+  async function runSelfTest() {
+    const results = [];
+    const out = document.getElementById('selftest-out');
+    out.style.display = 'block';
+    const assert = (name, cond, extra) => {
+      results.push({ name, ok: !!cond, extra: extra || '' });
+    };
+    const methodNames = ['setState', 'setEmotion', 'beginSpeech', 'wordBoundary', 'endSpeech',
+      'setMicLevel', 'setSpeechLevel', 'setLevel', 'setTeacherName', 'wave', 'nod', 'blink', 'destroy'];
+    for (const m of methodNames) assert('API.' + m + ' 存在', typeof avatar[m] === 'function');
+    assert('mountAvatar 返回对象含 el', !!avatar.el && avatar.el.classList.contains('ava-root'));
+
+    avatar.setState('listening'); await raf();
+    assert('setState(listening)', avatar.el.dataset.state === 'listening');
+
+    avatar.setEmotion('happy'); await raf();
+    assert('setEmotion(happy)', avatar.el.dataset.emotion === 'happy');
+    assert('happy → 眯眼笑', avatar.el.dataset.eyes === 'happy');
+
+    avatar.setState('speaking');
+    assert('setState(speaking)', avatar.el.dataset.state === 'speaking');
+    assert('speaking → 嘴张开', avatar.el.dataset.speaking === '1');
+
+    avatar.beginSpeech({ text: 'Hello there, my dear student!' });
+    await raf();
+    assert('beginSpeech → speaking', avatar.el.dataset.speaking === '1');
+    assert('口型在动（非 rest 或等待）', ['rest', 'aa', 'ee', 'o', 'u', 'mf'].includes(avatar.el.dataset.viseme));
+
+    avatar.wordBoundary({ word: 'there', charIndex: 6, elapsedMs: 300 });
+    await raf();
+    assert('wordBoundary 可调用', true);
+    avatar.endSpeech(); await raf();
+    assert('endSpeech → 闭合', avatar.el.dataset.speaking === '0' && avatar.el.dataset.viseme === 'rest');
+
+    avatar.setMicLevel(0.75);
+    assert('setMicLevel(0.75) 不抛错', true);
+
+    avatar.setLevel('B1');
+    assert('setLevel(B1)', document.querySelector('.ava-level__val').textContent === 'B1');
+
+    avatar.setTeacherName('Ava');
+    assert('setTeacherName(Ava)', document.querySelector('.ava-name').textContent === 'Ava');
+
+    avatar.wave(); await raf();
+    assert('wave() 触发挥手', avatar.el.classList.contains('is-waving'));
+    avatar.nod(); await raf();
+    assert('nod() 触发点头', avatar.el.classList.contains('is-nodding'));
+    avatar.blink(); await raf();
+    assert('blink() 触发眨眼', avatar.el.classList.contains('is-blinking'));
+
+    // 6 种 viseme 均可渲染
+    for (const v of ['rest', 'aa', 'ee', 'o', 'u', 'mf']) {
+      avatar.setViseme(v);
+      assert('viseme ' + v + ' 可切换', avatar.el.dataset.viseme === v);
+    }
+    avatar.endSpeech();
+
+    // 状态覆盖
+    for (const s of ['idle', 'listening', 'thinking', 'speaking', 'celebrate', 'sad', 'encouraging']) {
+      avatar.setState(s);
+      assert('setState(' + s + ')', avatar.el.dataset.state === s);
+    }
+    avatar.endSpeech();
+    avatar.setState('idle');
+    avatar.setEmotion('neutral');
+
+    // v1.4 外部实时振幅 setSpeechLevel
+    avatar.endSpeech();
+    avatar.setSpeechLevel(0.85);
+    await raf();
+    assert('setSpeechLevel 激活外部振幅模式', avatar.el.dataset.speechExternal === '1');
+    assert('外部振幅 > 0 且口型变量已写入', avatar.speechLevel > 0.2 && avatar.el.style.getPropertyValue('--ava-speech-open') !== '');
+    avatar.setSpeechLevel(0.1);
+    await raf();
+    assert('振幅变化可实时更新', avatar.speechLevel >= 0.05 && avatar.speechLevel < 0.9);
+    avatar.endSpeech();
+    await raf();
+    assert('endSpeech 复位外部振幅', avatar.el.dataset.speechExternal === '0' && avatar.el.dataset.speaking === '0');
+    assert('无外部振幅时 speechLevel 归零', avatar.speechLevel === 0);
+    // destroy 后调用安全 no-op
+    let destroySafe = true;
+    const dTmp = document.createElement('div');
+    dTmp.style.cssText = 'width:320px;height:420px';
+    document.body.appendChild(dTmp);
+    const tmp = (await import('./avatar.js')).mountAvatar(dTmp, {});
+    tmp.destroy();
+    try { tmp.setSpeechLevel(0.5); tmp.setSpeechLevel(NaN); } catch (e) { destroySafe = false; }
+    assert('destroy 后 setSpeechLevel 安全 no-op', destroySafe);
+    dTmp.remove();
+    avatar.setState('idle');
+    avatar.setEmotion('neutral');
+
+    const fail = results.filter((r) => !r.ok);
+    const pass = results.length - fail.length;
+    out.innerHTML = '<b>Ava Avatar 自检</b>  ' + pass + ' / ' + results.length + ' 通过' +
+      (fail.length ? '\n' + fail.map((f) => '<span class="fail">✗ ' + f.name + '</span>').join('\n') : '\n全部通过 ✓');
+    window.__AVA_SELFTEST__ = { total: results.length, pass, fail: fail.length, results };
+    document.title = fail.length ? 'AVA-SELFTEST-FAIL' : 'AVA-SELFTEST-PASS';
+    addLog('自检', pass + '/' + results.length + ' 通过' + (fail.length ? '，失败 ' + fail.length : ''));
+    return window.__AVA_SELFTEST__;
+  }
+  document.querySelector('[data-action="selftest"]').addEventListener('click', runSelfTest);
+  if (new URLSearchParams(location.search).has('selftest')) {
+    setTimeout(() => runSelfTest().catch((e) => reportError('selftest', e.message)), 700);
+  }
+
+  addLog('mountAvatar', '完成 · ' + AVATAR_VERSION + ' · ' + stage.clientWidth + '×' + stage.clientHeight + 'px');
+  window.__AVA_READY__ = true;
+</script>
+</body>
+</html>
