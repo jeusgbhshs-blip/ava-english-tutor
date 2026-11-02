@@ -30,7 +30,7 @@ npm run ios:open
 
 打开 `ios/App/App.xcodeproj`，使用共享 `App` scheme。暂定 Bundle ID 为 `io.github.jeusgbhshsblip.ava`；开发者账号注册前应确认命名可用，并选择开发团队。模拟器无需发布证书，真机分发和 TestFlight 需要签名配置。
 
-`.github/workflows/ios.yml` 在 `codex/**` 分支推送及 PR 时构建无签名模拟器 App，保留日志与 ZIP。工作流存在不等于运行成功，应检查具体结果。模拟器 `.app` 不能安装到真实 iPhone，也不是商店 `.ipa`。
+`.github/workflows/ios.yml` 在 `codex/**` 分支推送及 PR 时构建无签名模拟器 App 和 iPhone Release archive，保留日志、xcresult 与 ZIP。[首次模拟器编译](https://github.com/jeusgbhshs-blip/ava-english-tutor/actions/runs/41398312281) 已在 Xcode 26.6 上成功。工作流存在不等于每次运行成功，应检查对应提交的结果。模拟器 `.app` 不能安装到真实 iPhone；无签名 `.xcarchive` 也不能直接安装、上传 TestFlight 或提交商店，仍需开发者团队与签名导出。
 
 已有服务地址时可预填：
 
@@ -58,6 +58,8 @@ docker compose up -d --build
 Linux 容器不能运行现有 macOS Vision OCR。普通文字 PDF、TXT/MD/TSV/CSV、DOCX/PPTX、ODT/HTML 按实际解析能力使用；图片及扫描 PDF 的云端 OCR 仍需补齐。复杂排版应预览校对，不能宣称支持所有 PDF 或不限容量。
 
 备份持久数据卷，升级前保留旧镜像和备份。只运行单个写入实例；当前文件存储不支持多个服务副本同时写一个数据目录。
+
+`.github/workflows/test.yml` 的 Docker 检查构建真实镜像，验证非 root、只读容器、访问认证以及更换容器后的数据保留；检查使用隔离数据与一次性测试访问码，不启动真实域名或生产服务。这项检查不能替代域名、TLS 证书和供应商连通性验收。
 
 ## 真机验收
 

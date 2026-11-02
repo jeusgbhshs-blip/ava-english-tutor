@@ -1,6 +1,6 @@
 # Ava iPhone 发布审核记录
 
-审计日期：2026-11-02（北京时间）。范围为当前工作区的 iOS 适配、服务端访问边界、文件导入与数据存储。代码仍在本轮开发中，本文不表示已经构建签名安装包、通过真机验收、部署生产服务或获得 App Store 审核通过。
+审计日期：2026-11-02（北京时间）。范围为当前工作区的 iOS 适配、服务端访问边界、文件导入与数据存储。原生模拟器编译已通过；本文不表示已经构建签名安装包、通过真机验收、部署生产服务或获得 App Store 审核通过。
 
 **当前可以作为个人服务模式的开发候选版继续验收。公开共享运营与正式提审仍有下列前置条件。**
 
@@ -9,7 +9,7 @@
 | 优先级 | 实际情况与影响 | 代码证据 / 完成标准 |
 |---|---|---|
 | P0：公共用户的数据隔离 | 一个服务实例只有一份学习空间。同一个访问码可以读取和修改设置、知识库、学习计划、复习与记忆。访问码验证不能把不同用户的数据隔离开。不能把同一个服务地址和访问码发给多个无关客户。 | `lib/config.js:11` 的全局 `DATA_DIR`；`lib/plans.js:24`、`lib/memory.js:11`、`lib/review.js:8`、`lib/progress.js:10`、`lib/wordbook.js:9` 的固定文件；`lib/access.js` 的单一令牌。公开多人运营前，完成用户身份、资料所有权、服务端按用户隔离和授权测试，或每位用户独立部署。 |
-| P0：原生编译、签名与真机证据 | 已有 iPhone 工程、麦克风说明、Keychain 插件和隐私清单源码。此次环境未检测到完整 Xcode，不能据此确认 Swift 编译、系统权限与 App Store 签名成功。 | `ios/App/App.xcodeproj`、`ios/App/App/AvaSecureStorePlugin.swift`、`ios/App/App/AvaBridgeViewController.swift`；当前目标为 iPhone、iOS 16+。需要完整 Xcode、开发者 Team、签名配置，完成 Archive、安装及 TestFlight 测试。 |
+| P0：签名与真机证据 | GitHub Actions 已使用 Xcode 26.6 成功编译无签名模拟器 App，包含 Keychain 与音频中断桥接。用户尚无 Apple Developer 账号；没有签名安装、系统权限和真实设备证据。 | [已通过的原生编译](https://github.com/jeusgbhshs-blip/ava-english-tutor/actions/runs/41398312281)，提交 `8e3531ac015d553cd9ff1dca750b3d894dde7ce9`。当前目标为 iPhone、iOS 16+。仍需开发者 Team、签名配置、签名 Archive、安装及 TestFlight 测试。 |
 | P0：正式后台与真实语音验收 | 本审计没有生产 HTTPS 地址、运行日志或真实豆包服务调用结果。登录连接、HTTP/WS 本地模拟测试不能证明云端配额、模型版本、音色和网络均可用。 | `web/js/native-bootstrap.js` 首次启动连接服务；`lib/volcRealtime.js` 实时语音；`lib/tts.js` 点读。需要一个实际可访问的 HTTPS/WSS 服务、可用的两类语音授权，并在真实 iPhone 上完成录音、回复、打断、拒绝权限、后台切换和网络恢复测试。 |
 | P1：公开发行资料 | 现有 `web/privacy.html` 明确是开发测试说明，缺少真实运营主体、联系方法、保留/删除期限与最终服务商信息。它不能直接冒充正式隐私政策。 | 发布主体补全真实信息；提供可用的隐私/支持网址、审核访问方式与截图。Apple 要求提交完整可用版本、开放审核所需后台并提供可访问的隐私政策。[审核指南](https://developer.apple.com/app-store/review/guidelines/) |
 | P1：Linux 上的图片 OCR | iPhone 上传图片后，识别仍由服务端完成。当前图片 OCR 使用 macOS Vision；Linux 服务器会明确拒绝。`.doc`、`.rtf` 的转换也依赖 macOS。 | `lib/docExtract.js:430` 和 `runTextutil()`。若正式服务部署 Linux，需要实现替代 OCR/转换并实测，或在产品中明确限制这些格式；不能声称所有图片与旧 Word 格式都已支持。 |
@@ -43,7 +43,11 @@ PDF 提取仍是轻量文本提取器，并不是完整 PDF 排版引擎。已�
 | 匹配 KB/知识库的原有 API 与前端回归 | 32/32 通过 |
 | 原有个人数据与知识库增强状态测试 | 9/9 通过 |
 | 实际 100 MiB 边界上传与取消抽查（Node 24.22.1） | 100 MiB 合法 PDF 实际发送 104,857,600 字节并返回 200；无 Content-Length 的分块上传实际发送 104,857,601 字节并返回 413；随后健康检查与小文件上传均返回 200；取消时已落盘 4 MiB，取消后临时目录归零 |
-| iOS 原生编译、签名、设备音频和真实豆包服务 | 本审计未执行，不能标记通过 |
+| 完整项目验证（Node 24.22.1） | 147 个 JavaScript 文件语法检查、494 项单元测试、105 项端到端检查全部通过；端到端使用隔离的本地服务，不代表真实供应商验收 |
+| iPhone 尺寸浏览器验收 | 320、375、390、430 宽度及 844×390 横屏，检查学习、词库、资料和语音界面位置；不是 iPhone 真机或 WKWebView 测试 |
+| iOS 原生模拟器编译 | GitHub Actions / Xcode 26.6（17F113）成功；有模拟器 App ZIP、构建日志与 xcresult。模拟器包不能直接安装到 iPhone |
+| iPhone 无签名 Release archive、Docker 部署验收 | 自动化工作流已补齐，结果以对应提交的 Actions 记录为准 |
+| 签名、设备音频和真实豆包服务 | 未执行，不能标记通过 |
 
 边界抽查使用隔离服务、数据与临时目录。PDF 经 `pdfinfo` 确认为一页、104,857,600 字节的有效 PDF；以一个真实文本页加合法空白填充达到边界，不能据此保证任意复杂 100 MiB PDF 的识别效果。接受与拒绝请求分别耗时 73 ms、49 ms；含文件生成、外部 PDF 验证、服务启动和清理的总时间为 14.55 秒。服务进程本轮 OS RSS 峰值为 **241.6 MiB**，不是 iPhone 内存测量，也不是生产服务器容量承诺。测试仅覆盖本机回环网络和磁盘，不包含反向代理、移动网络或 WKWebView。大文件负载未加入默认并行 CI，避免额外内存和磁盘开销；可复现实验与小型结果保存在本次工作区 `work/upload-audit/boundary-smoke.mjs`、`work/upload-audit/boundary-smoke-result.json`，100 MiB 临时载荷已删除。
 

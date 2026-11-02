@@ -1,4 +1,4 @@
-name: Ava iOS simulator
+name: Ava iOS builds
 
 on:
   push:
@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   simulator:
+    name: iOS simulator and unsigned device archive
     runs-on: macos-26
     timeout-minutes: 20
     defaults:
@@ -82,11 +83,39 @@ jobs:
             'Open the app bundle using an iOS Simulator on a compatible Mac.' \
             > build/ios-ci/README.txt
 
-      - name: Upload simulator app and build reports
+      - name: Archive unsigned iPhone application
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/ios-device-derived-data \
+            -archivePath build/ios-ci/Ava-iPhone.xcarchive \
+            -resultBundlePath build/ios-ci/device-archive.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            archive 2>&1 | tee build/ios-ci/device-archive.log
+
+      - name: Package unsigned device archive
+        run: |
+          set -euo pipefail
+          test -d build/ios-ci/Ava-iPhone.xcarchive/Products/Applications/App.app
+          ditto -c -k --sequesterRsrc --keepParent build/ios-ci/Ava-iPhone.xcarchive build/ios-ci/Ava-iPhone.xcarchive.zip
+          printf '\n%s\n' \
+            'Ava-iPhone.xcarchive.zip is an unsigned Release archive for build verification.' \
+            'It cannot be installed on an iPhone, uploaded to TestFlight, or submitted to the App Store as supplied.' \
+            'Distribution requires an Apple Developer team, signing certificates, provisioning, and a signed export.' \
+            >> build/ios-ci/README.txt
+
+      - name: Upload simulator app, unsigned device archive, and build reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: ava-ios-simulator-${{ github.run_number }}
-          path: build/ios-ci/
+          path: |
+            build/ios-ci/
+            !build/ios-ci/Ava-iPhone.xcarchive/
           if-no-files-found: warn
           retention-days: 14

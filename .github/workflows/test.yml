@@ -27,3 +27,95 @@ jobs:
       - run: npm test
       - run: npm run test:e2e
       # Real provider audio, macOS Vision OCR, and browser UI are separate acceptance gates.
+
+  docker:
+    name: Isolated Docker deployment check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AVA_CI_IMAGE: ava-ci:${{ github.run_id }}-${{ github.run_attempt }}
+      AVA_CI_CONTAINER: ava-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      AVA_CI_VOLUME: ava-ci-data-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build server image
+        run: docker build --tag "$AVA_CI_IMAGE" .
+
+      - name: Verify restricted container, authentication, and persistent data
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This random test credential stays in this step and is never printed.
+          export AVA_ACCESS_TOKEN="$(openssl rand -hex 32)"
+          export AVA_DOMAIN=ava-ci.invalid
+          docker compose config --quiet
+          docker volume create "$AVA_CI_VOLUME" > /dev/null
+
+          start_ava() {
+            docker run --detach --name "$AVA_CI_CONTAINER" \
+              --network none \
+              --read-only \
+              --mount "type=volume,source=$AVA_CI_VOLUME,target=/app/data" \
+              --tmpfs /tmp:size=536870912,mode=1777 \
+              --tmpfs /app/.runtime:uid=1000,gid=1000,mode=0700 \
+              --memory 1g --cpus 2 --pids-limit 128 \
+              --security-opt no-new-privileges:true --cap-drop ALL \
+              --env AVA_ACCESS_TOKEN \
+              --env AVA_ALLOWED_ORIGINS=https://ava-ci.invalid,capacitor://localhost \
+              "$AVA_CI_IMAGE" > /dev/null
+            test "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$AVA_CI_CONTAINER")" = true
+          }
+
+          verify_ava() {
+            docker exec --interactive "$AVA_CI_CONTAINER" node --input-type=module - "$1" <<'NODE'
+          import assert from 'node:assert/strict';
+          import { statSync } from 'node:fs';
+          import { setTimeout } from 'node:timers/promises';
+
+          assert.notEqual(process.getuid(), 0, 'Server container must run as a non-root user');
+          assert.equal(process.env.AVA_DATA_DIR, '/app/data');
+          const base = 'http://127.0.0.1:5180';
+          const headers = { Authorization: `Bearer ${process.env.AVA_ACCESS_TOKEN}` };
+          let ready = false;
+          for (let attempt = 0; attempt < 60; attempt++) {
+            try {
+              const response = await fetch(`${base}/api/access/status`, { signal: AbortSignal.timeout(1000) });
+              if (response.ok) { ready = true; break; }
+            } catch {}
+            await setTimeout(250);
+          }
+          assert.ok(ready, 'Container did not become ready');
+          const unauthenticated = await fetch(`${base}/api/health`);
+          assert.equal(unauthenticated.status, 401, 'Health data must require authentication');
+          const authenticated = await fetch(`${base}/api/health`, { headers });
+          assert.equal(authenticated.status, 200);
+          assert.equal((await authenticated.json()).ok, true);
+          if (process.argv[2] === 'write') {
+            const saved = await fetch(`${base}/api/settings`, {
+              method: 'PUT',
+              headers: { ...headers, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ teacherName: 'Docker CI' }),
+            });
+            assert.equal(saved.status, 200, 'Settings must be writable in the mounted data volume');
+          }
+          const settings = await fetch(`${base}/api/settings`, { headers });
+          assert.equal(settings.status, 200);
+          assert.equal((await settings.json()).teacherName, 'Docker CI', 'Settings must survive container replacement');
+          assert.equal(statSync('/app/data/settings.json').mode & 0o777, 0o600);
+          console.log(`Docker ${process.argv[2]} check passed: non-root, authenticated API, persistent settings.`);
+          NODE
+          }
+
+          start_ava
+          verify_ava write
+          docker rm --force "$AVA_CI_CONTAINER" > /dev/null
+          start_ava
+          verify_ava read
+
+      - name: Remove test containers and persistent volume
+        if: always()
+        shell: bash
+        run: |
+          docker rm --force "$AVA_CI_CONTAINER" > /dev/null 2>&1 || true
+          docker volume rm "$AVA_CI_VOLUME" > /dev/null 2>&1 || true
+          docker image rm "$AVA_CI_IMAGE" > /dev/null 2>&1 || true
