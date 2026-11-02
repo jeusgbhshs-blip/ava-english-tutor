@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createAccessControl, assertSafeBinding } from './lib/access.js';
 /**
  * Ava — AI 数字人英语老师 · 本地服务器（零第三方依赖）
  * 静态资源 + /api 接口 + SSE 流式对话 + 演示模式降级。
@@ -26,6 +27,7 @@ import { loadProgress, recordActivity, publicProgress, addVocabWords } from './l
 import { summarizeConversation } from './lib/summary.js';
 import { addWords, getWordbook } from './lib/wordbook.js';
 import { extractText } from './lib/docExtract.js';
+import { withUploadedFile, uploadCapabilities } from './lib/fileUpload.js';
 import { saveDoc, getDoc, saveDocAnalysis, listDocs, deleteDoc, makeDocId, publicDoc } from './lib/docStore.js';
 import { analyzeDocument } from './lib/docAnalysis.js';
 import { attachWsServer } from './lib/wsServer.js';
@@ -776,34 +778,26 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { ok: true, docs: listKBDocs(), stats: kbStats() });
   }
 
+  if (pathname === '/api/kb/upload-limits' && m === 'GET') {
+    return sendJson(res, 200, { ok: true, ...uploadCapabilities() });
+  }
+
   // 严格模式：先提取预览、不保存；用户校对后再 save-text
   if (pathname === '/api/kb/preview-file' && m === 'POST') {
-    let body;
     try {
-      body = await readJsonBody(req, 20 * 1024 * 1024);
-    } catch (err) {
-      return sendJson(res, err.status || 400, { ok: false, error: err.message });
-    }
-    const name = typeof body.name === 'string' ? body.name : 'preview';
-    const dataBase64 = typeof body.dataBase64 === 'string' ? body.dataBase64 : '';
-    if (!dataBase64) return sendJson(res, 400, { ok: false, error: '缺少文件内容（dataBase64）' });
-    let buffer;
-    try {
-      buffer = Buffer.from(dataBase64, 'base64');
-    } catch {
-      return sendJson(res, 400, { ok: false, error: '文件内容不是合法的 base64' });
-    }
-    try {
-      const extracted = await extractText({ filename: name, buffer });
-      return sendJson(res, 200, {
-        ok: true,
-        text: extracted.text,
-        kind: extracted.kind,
-        chars: String(extracted.text || '').length,
-        warnings: extracted.warnings || [],
+      return await withUploadedFile(req, url, readJsonBody, async ({ name, buffer }) => {
+        const extracted = await extractText({ filename: name, buffer });
+        return sendJson(res, 200, {
+          ok: true,
+          text: extracted.text,
+          kind: extracted.kind,
+          chars: extracted.chars,
+          truncated: extracted.truncated,
+          warnings: extracted.warnings || [],
+        });
       });
     } catch (err) {
-      return sendJson(res, 400, { ok: false, error: err.message });
+      return sendJson(res, err.status || 400, { ok: false, error: err.message });
     }
   }
 
@@ -836,33 +830,20 @@ async function handleApi(req, res, url) {
   }
 
   if (pathname === '/api/kb/upload' && m === 'POST') {
-    let body;
     try {
-      body = await readJsonBody(req, 20 * 1024 * 1024);
-    } catch (err) {
-      return sendJson(res, err.status || 400, { ok: false, error: err.message });
-    }
-    const name = typeof body.name === 'string' ? body.name : 'document';
-    const dataBase64 = typeof body.dataBase64 === 'string' ? body.dataBase64 : '';
-    if (!dataBase64) return sendJson(res, 400, { ok: false, error: '缺少文件内容（dataBase64）' });
-    let buffer;
-    try {
-      buffer = Buffer.from(dataBase64, 'base64');
-    } catch {
-      return sendJson(res, 400, { ok: false, error: '文件内容不是合法的 base64' });
-    }
-    try {
-      const { doc, extracted } = await addKBFile({ filename: name, buffer });
-      const settingsNow = loadSettings();
-      if (settingsNow.apiKey) enrichKBInBackground(doc.id, settingsNow);
-      return sendJson(res, 200, {
-        ok: true,
-        doc: publicKBMeta(getKBDoc(doc.id) || doc),
-        extracted: { kind: extracted.kind, chars: doc.chars, warnings: extracted.warnings || [] },
-        message: settingsNow.apiKey ? '原文已入库，正在生成摘要；期间也可按原文学习' : '原文已入库，可按原文学习；未配置模型 Key，未生成摘要',
+      return await withUploadedFile(req, url, readJsonBody, async ({ name, buffer }) => {
+        const { doc, extracted } = await addKBFile({ filename: name, buffer });
+        const settingsNow = loadSettings();
+        if (settingsNow.apiKey) enrichKBInBackground(doc.id, settingsNow);
+        return sendJson(res, 200, {
+          ok: true,
+          doc: publicKBMeta(getKBDoc(doc.id) || doc),
+          extracted: { kind: extracted.kind, chars: doc.chars, truncated: extracted.truncated, warnings: extracted.warnings || [] },
+          message: settingsNow.apiKey ? '原文已入库，正在生成摘要；期间也可按原文学习' : '原文已入库，可按原文学习；未配置模型 Key，未生成摘要',
+        });
       });
     } catch (err) {
-      return sendJson(res, 400, { ok: false, error: err.message });
+      return sendJson(res, err.status || 400, { ok: false, error: err.message });
     }
   }
 
@@ -1147,6 +1128,9 @@ async function handleApi(req, res, url) {
     }
     if (!buffer.length) {
       return sendJson(res, 400, { ok: false, error: '文件内容为空' });
+    }
+    if (buffer.length > 12 * 1024 * 1024) {
+      return sendJson(res, 400, { ok: false, error: '文件太大（旧版阅读上传最大 12MB；大文件请使用知识库）' });
     }
     let extracted;
     try {
@@ -1501,6 +1485,8 @@ function publicKBMeta(doc) {
   };
 }
 
+const accessControl = createAccessControl();
+
 async function requestHandler(req, res) {
   let url;
   try {
@@ -1510,6 +1496,7 @@ async function requestHandler(req, res) {
     return sendJson(res, 400, { ok: false, error: '请求地址或 Host 格式不正确' });
   }
   try {
+    if (accessControl.handle(req, res, url)) return;
     const apiResult = await handleApi(req, res, url);
     if (apiResult !== false) return;
     await serveStatic(req, res, url.pathname);
@@ -1692,7 +1679,7 @@ function handleVoiceSocket(conn, req) {
 const server = http.createServer(requestHandler);
 server.keepAliveTimeout = 65_000;
 server.headersTimeout = 70_000;
-attachWsServer(server, '/ws/voice', handleVoiceSocket);
+attachWsServer(server, '/ws/voice', handleVoiceSocket, accessControl.authorizeWebSocket);
 
 function listenOnce(port, host = '127.0.0.1') {
   return new Promise((resolve, reject) => {
@@ -1714,6 +1701,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const desired = Number.isInteger(args.port) && args.port >= 0 ? args.port : 5180;
   const host = args.host || '127.0.0.1';
+  assertSafeBinding(host, process.env.AVA_ACCESS_TOKEN || '', process.env.AVA_ALLOW_INSECURE_LAN === '1');
   let lastError = null;
   for (let i = 0; i < 20; i++) {
     const port = desired === 0 ? 0 : desired + i;

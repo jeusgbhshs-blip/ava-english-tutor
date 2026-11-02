@@ -1,0 +1,11 @@
+.git
+node_modules
+data
+data-share
+.runtime
+.env*
+test
+ios
+dist-ios
+docs
+*.log

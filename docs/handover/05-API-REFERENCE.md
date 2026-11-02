@@ -40,7 +40,7 @@ HTTP 头：`x-content-type-options: nosniff`、`referrer-policy: no-referrer`、
   "explainChinese": true,
   "voiceEngine": "volc",
   "volc": {
-    "appId": "…", "model": "3.0", "speaker": "…", "endpoint": "…",
+    "appId": "…", "model": "1.2.1.1", "speaker": "…", "endpoint": "…",
     "resourceId": "volc.speech.dialog", "hasKey": true, "keyHint": "…", "configured": true
   },
   "presets": [], "levels": []

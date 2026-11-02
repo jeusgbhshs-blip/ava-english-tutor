@@ -3,6 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import vm from 'node:vm'
+import { configureBackend } from '../web/js/backend.js'
 import { VolcRealtimeSession } from '../lib/volcRealtime.js'
 import { encodeError, encodeServerEvent, SERVER_EVENT } from '../lib/volcProtocol.js'
 
@@ -35,7 +36,8 @@ function globals(t, values) {
 function transport() {
   const sockets = []
   class FakeWebSocket {
-    constructor() {
+    constructor(url) {
+      this.url = url
       this.readyState = 0
       this.sent = []
       this.closeCalls = 0
@@ -157,17 +159,24 @@ test('upstream: protocol ERROR after ready still closes the active session once'
 })
 
 let moduleSequence = 0
-async function browserClient(t, { deferCapture = false } = {}) {
+async function browserClient(t, { deferCapture = false, gestureLocked = false, sampleRate = 48000 } = {}) {
   const fake = transport()
-  const audio = { requests: 0, processors: [], stoppedTracks: 0, releaseCapture: null }
+  const audio = { requests: 0, processors: [], stoppedTracks: 0, releaseCapture: null, contexts: [], sources: [], gesture: true, resumes: 0 }
   const node = () => ({ connect() {}, disconnect() {}, gain: { value: 1 } })
   const stream = { getTracks: () => [{ stop() { audio.stoppedTracks += 1 } }] }
   class FakeAudioContext {
     constructor() {
-      this.sampleRate = 48000
-      this.state = 'running'
+      this.sampleRate = sampleRate
+      this.state = gestureLocked ? 'suspended' : 'running'
+      audio.contexts.push(this)
       this.currentTime = 0
       this.destination = {}
+    }
+    resume() {
+      audio.resumes++
+      if (gestureLocked && !audio.gesture) return Promise.reject(new Error('user gesture required'))
+      this.state = 'running'
+      return Promise.resolve()
     }
     createGain() { return node() }
     createMediaStreamSource() { return node() }
@@ -179,7 +188,11 @@ async function browserClient(t, { deferCapture = false } = {}) {
     createBuffer(channels, length, rate) {
       return { duration: length / rate, getChannelData: () => new Float32Array(length) }
     }
-    createBufferSource() { return { ...node(), start() {}, stop() {} } }
+    createBufferSource() {
+      const source = { ...node(), stops: 0, start() {}, stop() { this.stops++ } }
+      audio.sources.push(source)
+      return source
+    }
     close() {}
   }
   globals(t, {
@@ -216,7 +229,7 @@ async function browserClient(t, { deferCapture = false } = {}) {
   })
   const ready = (socket = fake.sockets.at(-1)) => socket.receive(JSON.stringify({ type: 'ready', model: 'mock' }))
   const binary = (socket = fake.sockets.at(-1)) => socket.sent.filter((item) => item instanceof ArrayBuffer)
-  return { ...fake, audio, create, pcm, ready, binary }
+  return { ...fake, audio, create, pcm, ready, binary, module }
 }
 
 test('browser: socket open is not ready; first recorded PCM is sent only after ready', async (t) => {
@@ -546,4 +559,103 @@ test('PTT: cancelling after ready but before start resolves does not resume mic 
   assert.equal(controller.state.ptt, 'idle')
   assert.equal(controller.seen.resumes, 0)
   assert.equal(controller.seen.watchdogs, 0)
+})
+
+
+test('iOS audio: unlock happens during the initial tap, before socket and upstream waits', async (t) => {
+  const env = await browserClient(t, { gestureLocked: true })
+  const client = env.create()
+  const started = client.start()
+  assert.equal(env.audio.resumes, 1, 'resume must run synchronously in the gesture')
+  assert.equal(env.audio.requests, 0, 'unlocking output must not record before ready')
+  env.audio.gesture = false
+  env.sockets[0].open()
+  await tick()
+  env.ready()
+  assert.equal(await deadline(started), true)
+  assert.equal(env.audio.contexts.length, 1)
+})
+
+test('iOS audio: a gesture-prepared context survives lazy client creation', async (t) => {
+  const env = await browserClient(t, { gestureLocked: true })
+  assert.equal(env.module.prepareDoubaoAudio(), true)
+  env.audio.gesture = false
+  const client = env.create()
+  const started = client.start()
+  env.sockets[0].open()
+  await tick()
+  env.ready()
+  assert.equal(await deadline(started), true)
+  assert.equal(env.audio.contexts.length, 1, 'use the context already unlocked by the tap')
+})
+
+test('iOS audio: hangup silences scheduled playback immediately and ignores late frames', async (t) => {
+  const env = await browserClient(t)
+  const progress = []
+  const client = env.create({ onAudioProgress: (packet) => progress.push(packet) })
+  const started = client.start()
+  env.sockets[0].open()
+  await tick()
+  env.ready()
+  await started
+  env.sockets[0].receive(new Int16Array(480).buffer)
+  assert.equal(env.audio.sources.length, 1)
+  client.stop()
+  assert.equal(env.audio.sources[0].stops, 1, 'must not wait up to four seconds for server ended')
+  env.sockets[0].receive(new Int16Array(480).buffer)
+  env.sockets[0].receive(JSON.stringify({ type: 'audio-start' }))
+  assert.equal(progress.length, 1)
+  assert.equal(env.audio.sources.length, 1)
+})
+
+test('iOS audio: an old async Blob cannot play inside a replacement session', async (t) => {
+  const env = await browserClient(t)
+  const client = env.create()
+  const first = client.start()
+  env.sockets[0].open()
+  await tick()
+  env.ready()
+  await first
+  let resolveBlob
+  env.sockets[0].receive({ arrayBuffer: () => new Promise((resolve) => { resolveBlob = resolve }) })
+  client.stop()
+  const second = client.start()
+  env.sockets[1].open()
+  await tick()
+  env.ready()
+  await second
+  resolveBlob(new Int16Array(480).buffer)
+  await tick()
+  assert.equal(env.audio.sources.length, 0)
+})
+
+test('iOS audio: cancelling while a backend ticket is pending never opens a late socket', async (t) => {
+  const env = await browserClient(t)
+  let ticketResponse
+  globals(t, { fetch: () => new Promise((resolve) => { ticketResponse = resolve }) })
+  configureBackend({ origin: 'https://ava.invalid', token: 'offline-installation-token' })
+  t.after(() => configureBackend())
+  const client = env.create()
+  const started = client.start()
+  assert.equal(env.sockets.length, 0)
+  client.stop()
+  assert.equal(await deadline(started), false)
+  ticketResponse(new Response(JSON.stringify({ ticket: 'offline-single-use-ticket' }), { status: 200 }))
+  await tick()
+  assert.equal(env.sockets.length, 0)
+})
+
+
+test('iOS audio: a 44.1 kHz microphone still sends exact 16 kHz, 20 ms PCM frames', async (t) => {
+  const env = await browserClient(t, { sampleRate: 44100 })
+  const client = env.create()
+  const started = client.start()
+  env.sockets[0].open()
+  await tick()
+  env.ready()
+  await started
+  env.audio.processors[0].onaudioprocess({ inputBuffer: { getChannelData: () => new Float32Array(44101).fill(0.25) } })
+  const packets = env.binary()
+  assert.equal(packets.length, 50)
+  assert.equal(packets.every((packet) => packet.byteLength === 640), true)
 })

@@ -37,7 +37,7 @@
     "appId": "...",
     "apiKey": "...",
     "accessToken": "",
-    "model": "3.0",
+    "model": "1.2.1.1",
     "speaker": "en_female_dacey_uranus_bigtts",
     "endpoint": "wss://openspeech.bytedance.com/api/v3/realtime/dialogue",
     "resourceId": "volc.speech.dialog"

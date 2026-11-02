@@ -1,0 +1,41 @@
+services:
+  ava:
+    build: .
+    restart: unless-stopped
+    environment:
+      AVA_ACCESS_TOKEN: ${AVA_ACCESS_TOKEN:?Set a private access token of at least 32 characters}
+      AVA_MAX_UPLOAD_MB: ${AVA_MAX_UPLOAD_MB:-100}
+      AVA_ALLOWED_ORIGINS: https://${AVA_DOMAIN:?Set the public domain},capacitor://localhost
+    volumes:
+      - ava_data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=536870912,mode=1777
+      - /app/.runtime:uid=1000,gid=1000,mode=0700
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+  https:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      AVA_DOMAIN: ${AVA_DOMAIN:?Set the public domain}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      ava:
+        condition: service_healthy
+volumes:
+  ava_data:
+  caddy_data:
+  caddy_config:

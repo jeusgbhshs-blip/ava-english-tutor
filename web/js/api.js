@@ -1,3 +1,4 @@
+import { apiFetch } from './backend.js'
 /**
  * Ava 前端底层 · HTTP + SSE 流式对话客户端
  *
@@ -206,7 +207,7 @@ function toNetworkError(err, path, { timedOut, callerSignal, timeoutMs = DEFAULT
     return new ApiError('请求已取消', { code: 'aborted', path, cause: err })
   }
   return new ApiError(
-    `网络连接失败，无法访问本地服务（${path}）。请确认 Ava 服务器已启动，并通过 http://127.0.0.1:5180 打开页面。`,
+    `网络连接失败，无法访问 Ava 服务（${path}）。请检查网络、服务地址和服务运行状态。`,
     { code: 'network', path, detail: String(raw && raw.message ? raw.message : raw || ''), cause: err },
   )
 }
@@ -318,7 +319,7 @@ async function requestJSON(path, options = {}) {
     /** @type {Response} */
     let res
     try {
-      res = await fetch(urlOf(path), {
+      res = await apiFetch(urlOf(path), {
         method,
         headers: finalHeaders,
         body: serializeBody(body),
@@ -795,7 +796,7 @@ const VOLC_TIMEOUT_MS = 30_000
  *
  * @example
  * const result = await api.testVolc()              // 用设置页已保存凭据
- * const result2 = await api.testVolc({ appId: '…', apiKey: '…', model: '3.0' }) // 覆盖待保存字段
+ * const result2 = await api.testVolc({ appId: '…', apiKey: '…', model: '1.2.1.1' }) // 覆盖待保存字段
  * if (!result.ok) showError(result.error)
  *
  * @param {{appId?: string, apiKey?: string, accessToken?: string, model?: string, speaker?: string, endpoint?: string, resourceId?: string}} [config]
@@ -2174,7 +2175,7 @@ export function chatStream(body, handlers = {}) {
       /** @type {Response} */
       let res
       try {
-        res = await fetch(urlOf(CHAT_PATH), {
+        res = await apiFetch(urlOf(CHAT_PATH), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json; charset=utf-8',

@@ -1,5 +1,5 @@
 /**
- * Ava · 豆包实时语音 3.0 浏览器客户端（SPEC v1.4 §C3）
+ * Ava · 豆包实时语音浏览器客户端（O2.0 二进制接口）（SPEC v1.4 §C3）
  *
  * 浏览器原生 ESM，零第三方依赖、不接触任何豆包/火山密钥。
  * 链路：麦克风 → AudioWorklet 重采样 16k mono s16le（20ms/640B）→
@@ -36,7 +36,30 @@
 /* 常量 / 环境                                                                 */
 /* -------------------------------------------------------------------------- */
 
+import { apiWebSocketUrl } from './backend.js'
+
 const IS_BROWSER = typeof window !== 'undefined' && typeof document !== 'undefined'
+
+/** Reserve an unlocked context during the tap, before a lazy module or network wait. */
+let preparedAudioContext = null
+
+function resumeAudioContext(ctx) {
+  if (!ctx || ctx.state === 'running' || ctx.state === 'closed') return
+  try { Promise.resolve(ctx.resume()).catch(() => {}) } catch { /* next tap can retry */ }
+}
+
+export function prepareDoubaoAudio() {
+  if (!IS_BROWSER) return false
+  try {
+    if (!preparedAudioContext || preparedAudioContext.state === 'closed') {
+      const Ctx = window.AudioContext || window.webkitAudioContext
+      if (!Ctx) return false
+      preparedAudioContext = new Ctx({ latencyHint: 'interactive' })
+    }
+    resumeAudioContext(preparedAudioContext)
+    return true
+  } catch { return false }
+}
 
 /** 本地服务桥 WebSocket 路径（SPEC v1.4 §B4）。 */
 export const VOICE_WS_PATH = '/ws/voice'
@@ -71,13 +94,13 @@ const WORKLET_PROCESSOR_NAME = 'ava-pcm-16k'
 
 /** 语音链路错误码 → 中文可读文案。 */
 export const VOICE_ERROR_MESSAGES = {
-  unsupported: '当前浏览器不支持实时语音（需要麦克风、WebSocket 与 Web Audio），请改用 Chrome / Edge。',
-  denied: '麦克风权限被拒绝：请点击地址栏左侧图标，允许本页面使用麦克风后重试。',
+  unsupported: '当前环境不支持实时语音（需要麦克风、WebSocket 与 Web Audio），请更新系统或使用 Safari / Chrome。',
+  denied: '麦克风权限被拒绝：请在系统设置中允许 Ava 使用麦克风；使用浏览器时，请同时检查网站麦克风权限。',
   'not-found': '未检测到麦克风：请连接麦克风后重试。',
   busy: '麦克风被占用：请关闭其它正在使用麦克风的程序后重试。',
   'secure-context': '麦克风需要安全上下文：请通过 http://127.0.0.1 或 https 打开本页面。',
-  timeout: '语音连接超时：请确认本地 Ava 服务已启动后重试。',
-  network: '语音连接失败：请确认本地 Ava 服务已启动、网络正常后重试。',
+  timeout: '语音连接超时：请检查网络和 Ava 服务连接后重试。',
+  network: '语音连接失败：请检查网络和 Ava 服务连接后重试。',
   server: '语音服务返回错误，请重试。',
   closed: '语音连接已断开，请重新开始通话。',
   'not-configured': '尚未配置豆包实时语音凭据：请到设置页填写 App ID 与 API Key 后再试。',
@@ -434,9 +457,7 @@ export function createDoubaoVoice(opts = {}) {
   function buildWsUrl() {
     if (typeof options.wsUrl === 'string' && options.wsUrl) return options.wsUrl
     if (typeof options.url === 'string' && options.url) return options.url
-    const loc = window.location
-    const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${protocol}//${loc.host}${VOICE_WS_PATH}`
+    return apiWebSocketUrl(VOICE_WS_PATH)
   }
 
   /**
@@ -574,6 +595,7 @@ export function createDoubaoVoice(opts = {}) {
    */
   function resumeMic() {
     if (disposed || !active || !ready) return false
+    prepareAudio()
     micPaused = false
     return true
   }
@@ -623,15 +645,7 @@ export function createDoubaoVoice(opts = {}) {
    */
   function openSocket() {
     return new Promise((resolve, reject) => {
-      /** @type {WebSocket} */
-      let socket
-      try {
-        socket = new WebSocket(buildWsUrl())
-      } catch (err) {
-        reject(makeVoiceError('unsupported', '无法建立语音连接（WebSocket 不可用），请检查浏览器设置。'))
-        return
-      }
-      socket.binaryType = 'arraybuffer'
+      let socket = null
       let settled = false
       let timer = null
       const cleanupOpening = () => {
@@ -642,40 +656,54 @@ export function createDoubaoVoice(opts = {}) {
         if (settled) return
         settled = true
         cleanupOpening()
-        socket.onopen = null
-        socket.onmessage = null
-        socket.onclose = null
-        socket.onerror = null
-        try { socket.close() } catch { /* 忽略 */ }
+        if (socket) {
+          socket.onopen = null
+          socket.onmessage = null
+          socket.onclose = null
+          socket.onerror = null
+          try { socket.close() } catch { /* ignored */ }
+        }
         reject(error)
       }
       const cancel = () => rejectOpening(makeVoiceError('cancelled', '语音连接已取消。'))
       cancelSocketOpen = cancel
+      timer = setTimeout(() => rejectOpening(makeVoiceError('timeout')), WS_OPEN_TIMEOUT_MS)
 
-      timer = setTimeout(() => {
-        rejectOpening(makeVoiceError('timeout'))
-      }, WS_OPEN_TIMEOUT_MS)
-
-      socket.onopen = () => {
+      const connect = (url) => {
+        // A ticket may finish after hangup. Never open that cancelled transport.
         if (settled) return
-        settled = true
-        cleanupOpening()
-        resolve(socket)
-      }
-      socket.onerror = () => {
-        if (!settled) rejectOpening(makeVoiceError('network'))
-      }
-      socket.onmessage = (event) => {
-        if (settled) {
-          if (ws === socket) handleSocketMessage(event)
-        }
-      }
-      socket.onclose = (event) => {
-        if (!settled) {
-          rejectOpening(makeVoiceError('closed'))
+        try { socket = new WebSocket(url) } catch {
+          rejectOpening(makeVoiceError('network', '无法建立语音连接，请检查服务地址与网络。'))
           return
         }
-        if (ws === socket) handleSocketClosed(event)
+        socket.binaryType = 'arraybuffer'
+        socket.onopen = () => {
+          if (settled) return
+          settled = true
+          cleanupOpening()
+          resolve(socket)
+        }
+        socket.onerror = () => {
+          if (!settled) rejectOpening(makeVoiceError('network'))
+        }
+        socket.onmessage = (event) => {
+          if (settled && ws === socket) handleSocketMessage(event)
+        }
+        socket.onclose = (event) => {
+          if (!settled) {
+            rejectOpening(makeVoiceError('closed'))
+            return
+          }
+          if (ws === socket) handleSocketClosed(event)
+        }
+      }
+      try {
+        const url = buildWsUrl()
+        if (url && typeof url.then === 'function') {
+          url.then(connect, () => rejectOpening(makeVoiceError('network', '语音连接授权失败，请检查服务连接后重试。')))
+        } else connect(url)
+      } catch {
+        rejectOpening(makeVoiceError('network'))
       }
     })
   }
@@ -696,9 +724,10 @@ export function createDoubaoVoice(opts = {}) {
       return
     }
     if (data && typeof data.arrayBuffer === 'function') {
+      const generation = sessionGeneration
       data
         .arrayBuffer()
-        .then((buffer) => handleBinaryPcm(buffer))
+        .then((buffer) => { if (generation === sessionGeneration) handleBinaryPcm(buffer) })
         .catch(() => {})
     }
   }
@@ -716,6 +745,7 @@ export function createDoubaoVoice(opts = {}) {
       return
     }
     if (!payload || typeof payload !== 'object') return
+    if (stopping && payload.type !== 'ended') return
 
     switch (payload.type) {
       case 'ready': {
@@ -831,11 +861,13 @@ export function createDoubaoVoice(opts = {}) {
 
   /** 确保 AudioContext（采集与播放共用）。 @returns {AudioContext|null} */
   function ensureAudioContext() {
-    if (audioCtx) return audioCtx
+    if (audioCtx && audioCtx.state !== 'closed') return audioCtx
     const Ctx = window.AudioContext || window.webkitAudioContext
     if (!Ctx) return null
     try {
-      audioCtx = new Ctx()
+      audioCtx = preparedAudioContext && preparedAudioContext.state !== 'closed'
+        ? preparedAudioContext : new Ctx({ latencyHint: 'interactive' })
+      preparedAudioContext = null
       playbackGain = audioCtx.createGain()
       playbackGain.gain.value = outputMuted ? 0 : 1
       playbackGain.connect(audioCtx.destination)
@@ -845,6 +877,13 @@ export function createDoubaoVoice(opts = {}) {
       return null
     }
     return audioCtx
+  }
+
+  /** Call synchronously from the user gesture, before any network await. */
+  function prepareAudio() {
+    const ctx = ensureAudioContext()
+    resumeAudioContext(ctx)
+    return !!ctx
   }
 
   /** 开始说话（audio-start 事件或首个音频帧）。 */
@@ -860,7 +899,7 @@ export function createDoubaoVoice(opts = {}) {
    * @param {ArrayBuffer} buffer
    */
   function handleBinaryPcm(buffer) {
-    if (disposed || !buffer) return
+    if (disposed || !active || stopping || closingSocket || !buffer) return
     const bytes = buffer.byteLength
     if (bytes < 2) return
     const usable = bytes - (bytes % 2)
@@ -896,13 +935,7 @@ export function createDoubaoVoice(opts = {}) {
   function schedulePcm(int16) {
     const ctx = ensureAudioContext()
     if (!ctx || !int16.length) return
-    if (ctx.state === 'suspended') {
-      try {
-        ctx.resume()
-      } catch {
-        /* 忽略 */
-      }
-    }
+    resumeAudioContext(ctx)
     let buffer
     try {
       buffer = ctx.createBuffer(1, int16.length, OUTPUT_SAMPLE_RATE)
@@ -936,6 +969,7 @@ export function createDoubaoVoice(opts = {}) {
     sources.add(source)
     source.onended = () => {
       sources.delete(source)
+      try { source.disconnect() } catch { /* already disconnected */ }
     }
     emitLevel(rms)
     if (audioEndPending) scheduleAudioEndCheck()
@@ -1110,11 +1144,21 @@ export function createDoubaoVoice(opts = {}) {
     if (!ctx) {
       throw makeVoiceError('audio-failed', '当前浏览器不支持 Web Audio，无法采集麦克风。')
     }
+    let resumeTimer
     try {
-      if (ctx.state === 'suspended') await ctx.resume()
-    } catch {
-      /* 自动播放限制下可能失败，继续尝试 */
-    }
+      if (ctx.state !== 'running') {
+        await Promise.race([
+          ctx.resume(),
+          new Promise((_, reject) => {
+            resumeTimer = setTimeout(() => reject(makeVoiceError('audio-failed', '音频暂未启动，请再次点击麦克风；若有来电或其他音频，请结束后重试。')), 4_000)
+          }),
+        ])
+        if (ctx.state !== 'running') throw makeVoiceError('audio-failed', '音频已被系统暂停，请再次点击麦克风继续。')
+      }
+    } catch (err) {
+      if (err && err.name === 'VoiceError') throw err
+      throw makeVoiceError('audio-failed', '音频启动失败，请再次点击麦克风并检查系统权限。')
+    } finally { clearTimeout(resumeTimer) }
     if (generation !== sessionGeneration || !active || stopping || disposed) {
       throw makeVoiceError('cancelled', '语音连接已取消。')
     }
@@ -1355,6 +1399,8 @@ export function createDoubaoVoice(opts = {}) {
       // 同源 ws 由 location 推导，无需额外校验
     }
 
+    prepareAudio()
+
     // stop() 会等待旧服务端收尾；立即 start() 时先隔离旧连接，避免迟到 ended 结束新会话。
     if (stopTimer) {
       clearTimeout(stopTimer)
@@ -1427,6 +1473,7 @@ export function createDoubaoVoice(opts = {}) {
     active = false
     micPaused = false
     stopCapture()
+    clearPlayback('stop')
     sendJSON({ type: 'stop' })
     if (stopTimer) clearTimeout(stopTimer)
     stopTimer = setTimeout(() => {
@@ -1514,7 +1561,7 @@ export function createDoubaoVoice(opts = {}) {
   function stoppedCleanup() {
     if (audioCtx) {
       try {
-        audioCtx.close()
+        Promise.resolve(audioCtx.close()).catch(() => {})
       } catch {
         /* 忽略 */
       }
@@ -1526,6 +1573,7 @@ export function createDoubaoVoice(opts = {}) {
 
   return {
     start,
+    prepareAudio,
     stop,
     interrupt,
     commit,
@@ -1549,6 +1597,7 @@ export function createDoubaoVoice(opts = {}) {
         trackState: track ? track.readyState : 'none',
         label: track && track.label ? String(track.label) : '',
         sampleRate: settings.sampleRate || 0,
+        audioContextState: audioCtx ? audioCtx.state : 'none',
         gateMode: pttGateMode,
         gateFrames: pttGateFrames,
         framesSent,

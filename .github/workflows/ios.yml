@@ -1,0 +1,121 @@
+name: Ava iOS builds
+
+on:
+  push:
+    branches:
+      - 'codex/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ava-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator:
+    name: iOS simulator and unsigned device archive
+    runs-on: macos-26
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Record and verify the Apple toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p build/ios-ci
+          xcodebuild -version | tee build/ios-ci/toolchain.txt
+          xcode_major="$(xcodebuild -version | awk 'NR == 1 { split($2, version, "."); print version[1] }')"
+          if [[ ! "$xcode_major" =~ ^[0-9]+$ ]] || (( xcode_major < 26 )); then
+            echo '::error::The iOS build requires Xcode 26 or later.'
+            exit 1
+          fi
+          xcodebuild -showsdks >> build/ios-ci/toolchain.txt
+          printf 'Commit: %s\nNode: %s\nnpm: %s\n' "$GITHUB_SHA" "$(node --version)" "$(npm --version)" >> build/ios-ci/toolchain.txt
+
+      - name: Install locked dependencies
+        run: |
+          set -euo pipefail
+          npm ci 2>&1 | tee build/ios-ci/npm-ci.log
+
+      - name: Build web assets and synchronize iOS
+        run: |
+          set -euo pipefail
+          npm run ios:sync 2>&1 | tee build/ios-ci/ios-sync.log
+
+      - name: Verify native configuration and packaged assets
+        run: |
+          set -euo pipefail
+          npm run ios:verify 2>&1 | tee build/ios-ci/ios-verify.log
+
+      - name: Build unsigned simulator application
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios-derived-data \
+            -resultBundlePath build/ios-ci/build.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build/ios-ci/xcodebuild.log
+
+      - name: Package simulator application
+        run: |
+          set -euo pipefail
+          app_path='build/ios-derived-data/Build/Products/Debug-iphonesimulator/App.app'
+          test -d "$app_path"
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" build/ios-ci/Ava-Simulator.app.zip
+          printf '%s\n' \
+            'Unsigned iOS Simulator build; not an App Store submission or a device installation package.' \
+            "Source commit: $GITHUB_SHA" \
+            'Open the app bundle using an iOS Simulator on a compatible Mac.' \
+            > build/ios-ci/README.txt
+
+      - name: Archive unsigned iPhone application
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/ios-device-derived-data \
+            -archivePath build/ios-ci/Ava-iPhone.xcarchive \
+            -resultBundlePath build/ios-ci/device-archive.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            archive 2>&1 | tee build/ios-ci/device-archive.log
+
+      - name: Package unsigned device archive
+        run: |
+          set -euo pipefail
+          test -d build/ios-ci/Ava-iPhone.xcarchive/Products/Applications/App.app
+          ditto -c -k --sequesterRsrc --keepParent build/ios-ci/Ava-iPhone.xcarchive build/ios-ci/Ava-iPhone.xcarchive.zip
+          printf '\n%s\n' \
+            'Ava-iPhone.xcarchive.zip is an unsigned Release archive for build verification.' \
+            'It cannot be installed on an iPhone, uploaded to TestFlight, or submitted to the App Store as supplied.' \
+            'Distribution requires an Apple Developer team, signing certificates, provisioning, and a signed export.' \
+            >> build/ios-ci/README.txt
+
+      - name: Upload simulator app, unsigned device archive, and build reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ava-ios-simulator-${{ github.run_number }}
+          path: |
+            build/ios-ci/
+            !build/ios-ci/Ava-iPhone.xcarchive/
+          if-no-files-found: warn
+          retention-days: 14

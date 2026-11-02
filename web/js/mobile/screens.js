@@ -1,3 +1,4 @@
+import { apiFetch } from '../backend.js'
 /**
  * Ava 手机版 · 五个 Tab 屏幕渲染（课程 / 对话 / 助手 / 复习 / 我的）
  * v3.1：课程页改为「用户自定义计划 + 自选老师 + AI 课件生成态」；对话页去角色场景。
@@ -34,7 +35,7 @@ async function planFetch(path, { method = 'GET', body = null, timeoutMs = 15000 
   const controller = typeof AbortController === 'function' ? new AbortController() : null
   const timer = controller ? setTimeout(() => controller.abort(), Math.max(1500, timeoutMs)) : null
   try {
-    const res = await fetch(path, {
+    const res = await apiFetch(path, {
       method,
       headers: body == null ? undefined : { 'content-type': 'application/json' },
       body: body == null ? undefined : JSON.stringify(body),
@@ -1288,6 +1289,11 @@ export function renderProfile() {
               <div class="list-main"><div class="list-title">模型与语音设置</div><div class="list-sub">配置 AI 模型和豆包凭据，保存后返回主界面</div></div>
               <span class="list-value">${icon('chevron')}</span>
             </a>
+            ${globalThis.Capacitor?.isNativePlatform?.() ? `<button type="button" class="list-row" data-ava-connection>
+              <span class="list-icon">${icon('spark')}</span>
+              <div class="list-main"><div class="list-title">服务连接</div><div class="list-sub">检查或更新学习空间的连接</div></div>
+              <span class="list-value">${icon('chevron')}</span>
+            </button>` : ''}
             <button type="button" class="list-row" data-act="wordbook">
               <span class="list-icon">${icon('book')}</span>
               <div class="list-main"><div class="list-title">今日单词表</div><div class="list-sub">重点单词自动收录，随时复习</div></div>

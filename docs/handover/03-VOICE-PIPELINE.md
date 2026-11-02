@@ -86,7 +86,7 @@ idle
 本地服务 → 客户端：
 
 ```json
-{ "type": "ready", "model": "3.0", "speaker": "...", "character": {...}, "kb": {...} }
+{ "type": "ready", "model": "1.2.1.1", "speaker": "...", "character": {...}, "kb": {...} }
 { "type": "asr", "text": "...", "final": true }
 { "type": "chat", "text": "...", "final": false }
 { "type": "audio-start", "text": "..." }
@@ -119,7 +119,7 @@ idle
 ## 4. 火山实时语音客户端（`lib/volcRealtime.js`）
 
 - 端点：`wss://openspeech.bytedance.com/api/v3/realtime/dialogue`
-- 资源：`volc.speech.dialog`，模型 `3.0`，默认 speaker `en_female_dacey_uranus_bigtts`。
+- 资源：`volc.speech.dialog`，模型 `1.2.1.1`（O2.0），默认 speaker `en_female_dacey_uranus_bigtts`。
 - 鉴权头：`X-Api-App-Id` + `X-Api-Key` 或 `X-Api-Access-Key` + `X-Api-Resource-Id`。
 - 会话配置（`buildSessionConfig`）：
   - ASR：PCM 16k mono，`end_smooth_window_ms = pttMode ? 2000 : 1200`

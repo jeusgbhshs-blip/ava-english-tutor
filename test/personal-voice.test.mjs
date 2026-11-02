@@ -165,6 +165,7 @@ function mobileHarness({ media, audioContext, voiceFactory } = {}) {
   const seen = { toasts: [], audioStops: 0, browserCancels: 0, chatAborts: 0, loops: 0, plays: 0, timerStarts: 0 }
   const ui = { openSheet: noop, closeSheet: noop, switchTab: noop, isSheetCurrent: () => true, updateSheet: () => true }
   const h = moduleHarness('mobile/call.js', {
+    prepareDoubaoAudio: noop, prepareCharacterAudio: noop, apiFetch: (...args) => fetch(...args),
     ...dom, M: appState, ui, Element: Object,
     saveLocalPlan: (plan) => { appState.plan = plan },
     window: { AudioContext: audioContext, addEventListener: noop },
@@ -172,7 +173,7 @@ function mobileHarness({ media, audioContext, voiceFactory } = {}) {
     tts: { cancel: () => { seen.browserCancels++ } },
     toast: (message) => seen.toasts.push(message), esc: String, icon: () => '',
     __loadVoiceModule: async () => ({ createDoubaoVoice: voiceFactory || (() => null) }),
-  }, 'C, D, ui, openCall, endCall, hangup, bindCall, bindSummaryActions, openSummaryLocal, onSheetClosed, finalizeLesson, cancelPtt, startPtt, ensurePttStt, ensureMicMonitor, stopMicMonitor, ensureVolc, warmVolcSession, speakGroundedReply, sendTextToChat, showTextForm', {
+  }, 'C, D, ui, openCall, endCall, hangup, bindCall, bindSummaryActions, openSummaryLocal, onSheetClosed, finalizeLesson, cancelPtt, startPtt, ensurePttStt, ensureMicMonitor, stopMicMonitor, ensureVolc, warmVolcSession, speakGroundedReply, sendTextToChat, showTextForm, suspendCallAudio, recoverVolcConnection, togglePtt', {
     cacheDom: noop, bindDocsControls: noop, bindLessonControls: noop,
     setMicDock: noop, startMicLoop: () => { seen.loops++ }, stopMicLoop: noop,
     stopPttWatchdog: noop, startPttWatchdog: noop, clearPttTimers: noop, stopTimer: noop,
@@ -707,4 +708,56 @@ test('mobile: returning before the learner speaks closes without generating or s
   assert.equal(requests, 0)
   assert.equal(h.C.open, false)
   assert.equal(h.C.endAfterSheet, false)
+})
+
+
+test('iOS call: backgrounding releases audio and pending work while preserving the lesson and dialogue', async () => {
+  const h = mobileHarness()
+  let disposed = 0
+  let trackStopped = 0
+  h.C.engine = 'volc'
+  h.C.ptt = 'recording'
+  h.C.volc = { isActive: true, pauseMic: noop, cancelTurn: noop, dispose: () => disposed++ }
+  h.C.mic.stream = { getTracks: () => [{ stop: () => trackStopped++ }] }
+  h.C.chatHandle = { abort: () => h.seen.chatAborts++ }
+  h.C.messages = [{ role: 'user', content: 'Please keep my sentence.' }]
+  h.C.lesson = { id: 'lesson-background' }
+  h.suspendCallAudio()
+  await tick()
+  assert.equal(disposed, 1)
+  assert.equal(trackStopped, 1)
+  assert.equal(h.seen.chatAborts, 1)
+  assert.equal(h.C.open, true)
+  assert.equal(h.C.audioSuspended, true)
+  assert.equal(h.C.ptt, 'idle')
+  assert.equal(h.C.volc, null)
+  assert.equal(h.C.messages[0].content, 'Please keep my sentence.')
+  assert.equal(h.C.lesson.id, 'lesson-background')
+  assert.equal(h.recoverVolcConnection('interrupted'), false)
+  h.suspendCallAudio()
+  assert.equal(disposed, 1, 'repeated lifecycle events are harmless')
+})
+
+test('iOS call: an interrupted call cannot warm up or record until a foreground tap', async () => {
+  const h = mobileHarness()
+  let starts = 0
+  h.C.engine = 'volc'
+  h.C.audioSuspended = true
+  h.C.volc = { isActive: false, start: async () => { starts++; return true } }
+  await h.warmVolcSession()
+  assert.equal(await h.startPtt(), false)
+  assert.equal(starts, 0)
+  h.dom.document.visibilityState = 'hidden'
+  assert.equal(h.togglePtt(), false)
+  assert.equal(h.C.audioSuspended, true)
+})
+
+test('iOS call: the visibility lifecycle handler pauses active recording', () => {
+  const h = mobileHarness()
+  h.bindCall()
+  h.C.ptt = 'recording'
+  h.dom.document.visibilityState = 'hidden'
+  for (const handler of h.dom.listeners.get('visibilitychange') || []) handler()
+  assert.equal(h.C.audioSuspended, true)
+  assert.equal(h.C.ptt, 'idle')
 })

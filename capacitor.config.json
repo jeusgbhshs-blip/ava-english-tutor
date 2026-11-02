@@ -1,0 +1,20 @@
+{
+  "appId": "io.github.jeusgbhshsblip.ava",
+  "appName": "Ava 英语",
+  "webDir": "dist-ios",
+  "loggingBehavior": "none",
+  "server": {
+    "hostname": "localhost",
+    "iosScheme": "capacitor"
+  },
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  }
+}

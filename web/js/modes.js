@@ -1,3 +1,4 @@
+import { apiFetch } from './backend.js'
 /**
  * Ava · 四种教学模式 UI 与交互
  * free（自由对话）/ vocab（单词闯关）/ pronounce（跟读打分）/ roleplay（角色扮演）
@@ -1563,7 +1564,7 @@ async function analyzeDocApi(id, level) {
 
 async function deleteDocApi(id) {
   if (api && typeof api.deleteDoc === 'function') return api.deleteDoc(id)
-  const res = await fetch('/api/doc/' + encodeURIComponent(id), {
+  const res = await apiFetch('/api/doc/' + encodeURIComponent(id), {
     method: 'DELETE',
     headers: { accept: 'application/json' },
   })

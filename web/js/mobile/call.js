@@ -10,9 +10,13 @@ import {
   translateTexts, fetchSummary, showWordbookSheet, mmss, characterById, saveLocalPlan,
 } from './core.js'
 import { createSTT, tts } from '../speech.js'
+import { prepareDoubaoAudio } from '../doubao-voice.js'
+import { apiFetch } from '../backend.js'
+import { prepareCharacterAudio } from './voice-audio.js'
 
 const C = {
   open: false,
+  audioSuspended: false,
   callGeneration: 0,
   chatGeneration: 0,
   character: null,
@@ -591,11 +595,11 @@ function loadVoiceAudioModule() {
 /** 用当前老师音色播放一句话；helper 未就绪/失败返回 false（调用方回退 tts）。 */
 async function playCharacterVoice(text, { characterId = '', onStart, onEnd, volume, rate } = {}) {
   const value = String(text || '').trim()
-  if (!value || C.muted || !C.open || C.closingCall) return false
+  if (!value || C.muted || !C.open || C.closingCall || C.audioSuspended) return false
   const generation = C.callGeneration
   try {
     const mod = await loadVoiceAudioModule()
-    if (generation !== C.callGeneration || C.muted || !C.open || C.closingCall) return false
+    if (generation !== C.callGeneration || C.muted || !C.open || C.closingCall || C.audioSuspended) return false
     const fn = mod && (mod.playCharacterText || mod.default)
     if (typeof fn !== 'function') return false
     const result = await fn(value, {
@@ -715,7 +719,7 @@ function sendLessonProgress(payload, { keepalive = false } = {}) {
   if (!payload) return
   if (keepalive) {
     try {
-      void fetch('/api/plan/lesson-progress', {
+      void apiFetch('/api/plan/lesson-progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -1879,6 +1883,8 @@ export async function openCall(characterOrId, sceneIdx = 0, opts = {}) {
   if (C.open) endCall({ silent: true })
   const generation = ++C.callGeneration
   C.closingCall = false
+  C.audioSuspended = false
+  prepareCallAudio()
   C.volcRecovering = false
   C.volcRecoverAt = 0
   const lessonOpt = opts && opts.lesson && typeof opts.lesson === 'object' ? opts.lesson : null
@@ -2002,7 +2008,7 @@ export async function openCall(characterOrId, sceneIdx = 0, opts = {}) {
   D.translate.classList.add('is-on')
   D.translate.setAttribute('aria-pressed', 'true')
   C.engine = await detectEngine()
-  if (generation !== C.callGeneration || !C.open || C.closingCall) return false
+  if (generation !== C.callGeneration || !C.open || C.closingCall || C.audioSuspended) return false
   updateEngineLabel()
   setState('idle')
   startTimer()
@@ -2075,7 +2081,7 @@ async function ensureVolc() {
   const loading = (async () => {
     try {
       const mod = await import('../doubao-voice.js')
-      if (generation !== C.callGeneration || !C.open || C.closingCall) return null
+      if (generation !== C.callGeneration || !C.open || C.closingCall || C.audioSuspended) return null
       const factory = mod.createDoubaoVoice || mod.createDoubao || mod.default
       if (typeof factory !== 'function') return null
       const callbacks = {
@@ -2639,11 +2645,11 @@ function renderMicEnvironment(env) {
       D.envBanner.classList.add('is-blocked')
     } else if (env.permission === 'denied') {
       D.envBanner.hidden = false
-      D.envBanner.textContent = 'Chrome 已阻止本站麦克风：点下方「如何开启麦克风」按步骤允许，或改用文字输入。'
+      D.envBanner.textContent = '麦克风权限未开启：点下方「如何开启麦克风」按步骤允许，或改用文字输入。'
       D.envBanner.classList.add('is-blocked')
     } else if (env.audioInputs === 0) {
       D.envBanner.hidden = false
-      D.envBanner.textContent = '没有检测到麦克风输入设备：请检查 macOS 系统设置 → 隐私与安全性 → 麦克风 → Google Chrome。'
+      D.envBanner.textContent = '没有检测到麦克风输入设备：请在系统设置中允许 Ava 或当前浏览器使用麦克风。'
       D.envBanner.classList.add('is-blocked')
     } else {
       D.envBanner.hidden = true
@@ -2660,7 +2666,7 @@ function renderMicEnvironment(env) {
     setMicDock('unsupported', {
       label: env.secure ? '无法访问麦克风' : '当前环境不支持麦克风',
       message: env.secure
-        ? '当前浏览器无法访问麦克风，请换 Chrome 或 HTTPS 打开，或改用文字输入。'
+        ? '当前环境无法访问麦克风，请检查系统权限并使用 HTTPS 连接，或改用文字输入。'
         : '语音需要 HTTPS 或本机 localhost，当前可用文字练习。',
       showRetry: false,
       showDiag: true,
@@ -2670,7 +2676,7 @@ function renderMicEnvironment(env) {
   }
   if (env.permission === 'denied') {
     setMicDock('denied', {
-      label: 'Chrome 已阻止本站麦克风',
+      label: '麦克风权限未开启',
       message: '浏览器已阻止本站麦克风，需手动开启：点「如何开启麦克风」按步骤把本站麦克风改为「允许」，然后刷新页面。',
       showRetry: true,
       retryLabel: '如何开启麦克风',
@@ -2682,7 +2688,7 @@ function renderMicEnvironment(env) {
   if (env.audioInputs === 0) {
     setMicDock('unavailable', {
       label: '未检测到麦克风设备',
-      message: '请检查 macOS「系统设置 → 隐私与安全性 → 麦克风 → Google Chrome」是否勾选，检查外接/内置麦克风后点「重新检测」。',
+      message: '请在系统设置中允许 Ava 或当前浏览器使用麦克风，检查耳机或内置麦克风后点「重新检测」。',
       showRetry: true,
       retryLabel: '重新检测',
       showDiag: true,
@@ -2695,7 +2701,7 @@ function renderMicEnvironment(env) {
 async function initMicForCall() {
   const generation = C.callGeneration
   const env = await detectMicEnvironment()
-  if (generation !== C.callGeneration || !C.open || C.closingCall) return false
+  if (generation !== C.callGeneration || !C.open || C.closingCall || C.audioSuspended) return false
   if (!env.secure || !env.hasMedia) return false
   if (env.permission === 'denied') return false
   if (env.audioInputs === 0) return false
@@ -2725,7 +2731,7 @@ async function handleMicRetry() {
     if (!ok && env2.audioInputs === 0) {
       setMicDock('unavailable', {
         label: '未检测到麦克风设备',
-        message: '仍然没有检测到麦克风。请检查 macOS「系统设置 → 隐私与安全性 → 麦克风 → Google Chrome」是否勾选，或改用文字输入。',
+        message: '仍然没有检测到麦克风。请检查系统麦克风权限与耳机连接，或改用文字输入。',
         showRetry: true,
         retryLabel: '重新检测',
         showDiag: true,
@@ -2753,7 +2759,7 @@ async function handleMicRetry() {
   } else if (env2.audioInputs === 0) {
     setMicDock('unavailable', {
       label: '未检测到麦克风设备',
-      message: '请检查 macOS 系统设置 → 隐私与安全性 → 麦克风 → Google Chrome，或改用文字输入。',
+      message: '请检查系统麦克风权限与耳机连接，或改用文字输入。',
       showRetry: true,
       retryLabel: '重新检测',
       showDiag: true,
@@ -2775,18 +2781,18 @@ function showMicHelpSheet(kind = 'denied') {
   const intro =
     kind === 'env' || !env.secure
       ? '语音需要 HTTPS 或本机 localhost，当前可用文字练习。'
-      : '如果 Chrome 已阻止本站麦克风，按下面步骤把它改为「允许」：'
+      : '请按当前设备开启麦克风权限，再返回 Ava 重试：'
   const sheetToken = ui.openSheet(
     '开启麦克风权限',
     `<div class="mic-help">
       <p>${esc(intro)}</p>
       <ol class="mic-help-steps">
-        <li>点浏览器地址栏左侧的图标（锁 / 滑杆 / 网站信息）。</li>
-        <li>选择「网站设置」（Site settings）。</li>
-        <li>找到「麦克风（Microphone）」，改为「允许（Allow）」。</li>
-        <li>回到本页，点「重新加载页面」或按 ⌘R 刷新。</li>
+        <li>iPhone App：在系统「设置」中找到 Ava，允许使用「麦克风」。</li>
+        <li>Safari：在当前网站的页面设置中，将麦克风权限设为「允许」。</li>
+        <li>其他浏览器：打开地址栏的网站设置，将麦克风权限设为「允许」。</li>
+        <li>返回 Ava 后重试；浏览器页面可点下方「重新加载页面」。</li>
       </ol>
-      <p class="mic-help-note">如果网站设置里没有麦克风选项：打开 macOS「系统设置 → 隐私与安全性 → 麦克风」，确认已勾选 Google Chrome。</p>
+      <p class="mic-help-note">若仍无法录音，请检查系统隐私设置中的麦克风权限，并结束正在占用麦克风的通话。</p>
       <div class="mic-help-actions">
         <button type="button" class="btn btn-ghost" data-act="mic-reload">重新加载页面</button>
         <button type="button" class="btn btn-primary" data-act="mic-copy">复制诊断信息</button>
@@ -2808,7 +2814,7 @@ function showMicHelpSheet(kind = 'denied') {
 
 /** 请求麦克风 + 实时音量条 + 权限诊断（不保存/上传任何音频）。 */
 async function ensureMicMonitor({ force = false } = {}) {
-  if (!C.open || C.closingCall) return false
+  if (!C.open || C.closingCall || C.audioSuspended) return false
   if (C.mic.pending && !force) return C.mic.pending
   if (C.mic.active && !force) return true
   if (force) stopMicMonitor()
@@ -2826,7 +2832,7 @@ async function ensureMicMonitor({ force = false } = {}) {
       stream = await media.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       })
-      if (generation !== C.mic.generation || !C.open || C.closingCall) {
+      if (generation !== C.mic.generation || !C.open || C.closingCall || C.audioSuspended) {
         stream.getTracks().forEach((track) => track.stop())
         return false
       }
@@ -2852,7 +2858,7 @@ async function ensureMicMonitor({ force = false } = {}) {
     } catch (err) {
       if (stream) stream.getTracks().forEach((track) => track.stop())
       if (ctx) { try { ctx.close() } catch { /* 忽略 */ } }
-      if (generation !== C.mic.generation || !C.open || C.closingCall) return false
+      if (generation !== C.mic.generation || !C.open || C.closingCall || C.audioSuspended) return false
       const kind = classifyMicError(err)
       const messages = { denied: MIC_MESSAGES.denied, unavailable: MIC_MESSAGES.unavailable, busy: MIC_MESSAGES.busy, unsupported: MIC_MESSAGES.unsupported, error: MIC_MESSAGES.error }
       setMicDock(kind, { message: messages[kind], showRetry: kind === 'denied' || kind === 'unavailable' || kind === 'busy' || kind === 'error', showDiag: true, showText: true })
@@ -2938,7 +2944,7 @@ function bumpPttToken() {
 }
 
 function volcCallbacksValid() {
-  return !!(C.open && !C.closingCall && C.engine === 'volc' && C.volc && C.volcToken > 0 && C.volcToken === C.pttToken)
+  return !!(C.open && !C.closingCall && !C.audioSuspended && C.engine === 'volc' && C.volc && C.volcToken > 0 && C.volcToken === C.pttToken)
 }
 
 function clearPttTimers() {
@@ -3324,7 +3330,9 @@ function ensurePttStt() {
 
 /** 点击麦克风：idle → recording；recording → 提交；其他状态下先打断再录音。 */
 export function togglePtt() {
-  if (!C.open) return false
+  if (!C.open || document.visibilityState === 'hidden') return false
+  C.audioSuspended = false
+  prepareCallAudio()
   if (C.ptt === 'connecting') {
     cancelConnectingPtt()
     return true
@@ -3430,7 +3438,8 @@ function startTeacherReplyGuard(generation) {
 
 /** 实时语音自动恢复：重试连接；仍失败则用角色原声继续，不弹“已重置”。 */
 function recoverVolcConnection(reason = '') {
-  if (!C.open || C.closingCall || C.volcRecovering) return false
+  if (!C.open || C.closingCall || C.audioSuspended || C.volcRecovering) return false
+  const generation = C.callGeneration
   if (Date.now() - C.volcRecoverAt < 6000) return false
   C.volcRecoverAt = Date.now()
   C.volcRecovering = true
@@ -3442,11 +3451,11 @@ function recoverVolcConnection(reason = '') {
 
   const tryStart = async () => {
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      if (!C.open || C.closingCall) return false
+      if (!C.open || C.closingCall || C.audioSuspended || generation !== C.callGeneration) return false
       if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, attempt * 900))
       try {
         const voice = await ensureVolc()
-        if (!voice || !C.open) continue
+        if (!voice || !C.open || C.audioSuspended || generation !== C.callGeneration) continue
         const outcome = await withTimeout(voice.start({ ...volcStartOptions(), startPaused: true }), 15000)
         if (outcome === false || outcome === '__timeout__') continue
         try {
@@ -3465,6 +3474,7 @@ function recoverVolcConnection(reason = '') {
 
   setTimeout(async () => {
     const ok = await tryStart()
+    if (!C.open || C.closingCall || C.audioSuspended || generation !== C.callGeneration) return
     C.volcRecovering = false
     try {
       if (ok) {
@@ -3489,7 +3499,7 @@ function recoverVolcConnection(reason = '') {
  * 避免“语音说不完就整段重置”的体验。
  */
 function fallbackContinueWithTts(reason = '') {
-  if (!C.open || C.closingCall) return false
+  if (!C.open || C.closingCall || C.audioSuspended) return false
   if (Date.now() - C.ttsFallbackAt < 15000) return false
   C.ttsFallbackAt = Date.now()
   try {
@@ -3555,7 +3565,8 @@ function resetVolcSession() {
   if (typeof window !== 'undefined') window.__avaDebugVoice = null
   if (voice) {
     try {
-      if (voice.isActive) voice.stop()
+      if (typeof voice.dispose === 'function') voice.dispose()
+      else if (voice.isActive) voice.stop()
     } catch {
       /* 忽略 */
     }
@@ -3575,19 +3586,19 @@ function scheduleVolcWarmup(delay = 500) {
   clearVolcWarmup()
   C.volcWarmTimer = setTimeout(() => {
     C.volcWarmTimer = null
-    if (!C.open || C.closingCall || C.engine !== 'volc' || C.ptt !== 'idle') return
+    if (!C.open || C.closingCall || C.audioSuspended || C.engine !== 'volc' || C.ptt !== 'idle') return
     void warmVolcSession()
   }, delay)
 }
 
 /** 预热：提前 start 并暂停 mic，减少下一轮连接吞音；失败静默。 */
 async function warmVolcSession() {
-  if (!C.open || C.closingCall || C.engine !== 'volc' || C.ptt !== 'idle' || C.volcWarming) return
+  if (!C.open || C.closingCall || C.audioSuspended || C.engine !== 'volc' || C.ptt !== 'idle' || C.volcWarming) return
   C.volcWarming = true
   C.volcWarmPromise = (async () => {
     try {
       const voice = await ensureVolc()
-      if (!voice || !C.open || C.engine !== 'volc') return
+      if (!voice || !C.open || C.audioSuspended || C.engine !== 'volc') return
       if (!isVolcSessionActive()) {
         const outcome = await withTimeout(voice.start({ ...volcStartOptions(), startPaused: true }), 15000)
         if (outcome === false || outcome === '__timeout__') {
@@ -3595,7 +3606,7 @@ async function warmVolcSession() {
           return
         }
       }
-      if (!C.open || C.engine !== 'volc') {
+      if (!C.open || C.audioSuspended || C.engine !== 'volc') {
         try {
           if (voice.isActive) voice.stop()
         } catch {
@@ -3641,7 +3652,7 @@ async function tryStartVolcSession() {
 }
 
 async function startPtt() {
-  if (!C.open) return false
+  if (!C.open || C.audioSuspended) return false
   if (C.volcRecovering) return false
   // 开始说话前停掉资料自动朗读，避免和用户说话叠音
   void stopCharacterVoice()
@@ -4374,10 +4385,40 @@ export function onSheetClosed() {
   }
 }
 
+/** Audio activation must stay in the pointer/click call stack on iOS. */
+function prepareCallAudio() {
+  if (document.visibilityState === 'hidden') return
+  C.audioSuspended = false
+  if (C.volc && typeof C.volc.prepareAudio === 'function') C.volc.prepareAudio()
+  else prepareDoubaoAudio()
+  prepareCharacterAudio()
+}
+
+function suspendCallAudio() {
+  if (!C.open || C.audioSuspended) return
+  C.audioSuspended = true
+  persistLessonProgress({ immediate: true, keepalive: true })
+  C.callGeneration += 1
+  clearVolcWarmup()
+  stopCallOutput()
+  abortPtt({ silent: true })
+  resetVolcSession()
+  stopMicMonitor()
+  C.volcWarming = false
+  C.volcWarmPromise = null
+  C.volcRecovering = false
+  setState('idle')
+  if (D.signal) D.signal.textContent = '语音已暂停 · 点麦克风继续'
+}
+
 /* ------------------------------ 事件绑定 ------------------------------ */
 function bindCall() {
   C.bound = true
   document.addEventListener('keydown', containCallFocus)
+  D.call.addEventListener('pointerdown', prepareCallAudio, { capture: true })
+  D.call.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') prepareCallAudio()
+  }, { capture: true })
   D.talk.addEventListener('click', () => {
     void togglePtt()
   })
@@ -4396,7 +4437,10 @@ function bindCall() {
     showTextForm(true)
   })
   // 长按视觉反馈（点击已统一处理）
-  D.talk.addEventListener('pointerdown', () => D.talk.classList.add('is-holding'))
+  D.talk.addEventListener('pointerdown', () => {
+    prepareCallAudio()
+    D.talk.classList.add('is-holding')
+  })
   D.talk.addEventListener('pointerup', () => D.talk.classList.remove('is-holding'))
   D.talk.addEventListener('pointercancel', () => D.talk.classList.remove('is-holding'))
 
@@ -4484,8 +4528,14 @@ function bindCall() {
   })
   D.hangup.addEventListener('click', () => void hangup())
   D.back.addEventListener('click', () => void hangup())
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') suspendCallAudio()
+    else if (C.open) C.audioSuspended = false
+  })
+  window.addEventListener('ava:native-interruption', suspendCallAudio)
   // 退出时清理
   window.addEventListener('pagehide', () => {
+    suspendCallAudio()
     try {
       if (C.volc && typeof C.volc.dispose === 'function') C.volc.dispose()
     } catch {

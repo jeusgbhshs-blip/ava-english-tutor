@@ -1,0 +1,8 @@
+{$AVA_DOMAIN} {
+    encode zstd gzip
+    # Access logs are deliberately off: WebSocket tickets must not be logged.
+    request_body {
+        max_size 105MB
+    }
+    reverse_proxy ava:5180
+}

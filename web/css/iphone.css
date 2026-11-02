@@ -1,0 +1,251 @@
+/* iPhone / compact-window layout. Load after the desktop presentation layers. */
+:root {
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --app-height: 100dvh;
+  --app-top: 0px;
+}
+
+@media (max-width: 1100px) {
+  :root {
+    --phone-left: max(12px, var(--safe-l));
+    --phone-right: max(12px, var(--safe-r));
+    --phone-nav-height: 70px;
+    --call-dock-bottom: calc(10px + var(--safe-b));
+    --call-content-bottom: calc(96px + var(--safe-b));
+    --call-content-top: calc(90px + var(--safe-t));
+  }
+  :root.keyboard-open { --safe-b: 0px; }
+  .app {
+    position: fixed; top: var(--app-top); left: 0;
+    width: 100%; height: var(--app-height); padding-top: 0;
+  }
+  .call, .kb-screen {
+    top: var(--app-top); bottom: auto; height: var(--app-height);
+  }
+  .screen {
+    padding: calc(18px + var(--safe-t)) var(--phone-right)
+      calc(var(--phone-nav-height) + 24px + var(--safe-b)) var(--phone-left);
+    scroll-padding-block: 20px calc(var(--phone-nav-height) + 24px + var(--safe-b));
+  }
+  .screen-layout, #screen-profile .screen-layout { grid-template-columns: minmax(0, 1fr); }
+  .plan-stages { grid-template-columns: minmax(0, 1fr); }
+  .screen-side, .screen-main, .hero-top > *, .m-head > *, .brand { min-width: 0; }
+  .hero-title, .m-title, .list-title { overflow-wrap: anywhere; }
+  .ph-stat { min-width: 0; padding: 2px 8px; }
+  .ph-stat strong { font-size: 24px; }
+  .rv-example { grid-template-columns: 18px minmax(0, 1fr) 44px; }
+  #screen-review:has(.rv-session), #screen-review:has(.rv-game-view) { overflow-y: auto !important; }
+  #screen-review:has(.rv-session) .rv-wrap.narrow,
+  #screen-review:has(.rv-game-view) .rv-wrap.narrow { height: auto; }
+  #screen-review:has(.rv-session) .rv-session,
+  #screen-review:has(.rv-game-view) .rv-game-view { height: auto; display: flex; flex-direction: column; }
+  #screen-review:has(.rv-session) .rv-card { height: 420px; min-height: 420px; }
+  #screen-review:has(.rv-game-view) .rv-game-panel { overflow: visible; flex: none; }
+
+  /* One grid gives all five tabs equal, non-overlapping hit regions at 320px. */
+  #tabbar {
+    left: max(var(--phone-left), calc((100% - 520px) / 2));
+    right: max(var(--phone-right), calc((100% - 520px) / 2));
+    bottom: calc(8px + var(--safe-b)); transform: none;
+    width: auto; height: var(--phone-nav-height); padding: 5px;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px;
+  }
+  #tabbar .tab {
+    width: 100%; height: 100%; min-width: 0;
+    flex-direction: column; gap: 3px; padding: 3px 0; font-size: 11px;
+  }
+  #tabbar .tab-key { display: none; }
+  #tabbar .tab-orb { width: 24px; height: 24px; margin: 0; }
+  #tabbar .tab-due { top: 1px; right: max(2px, calc(50% - 25px)); }
+
+  /* Hero content stays in flow, so a small phone can scroll instead of overlap. */
+  #screen-chat { overflow-y: auto; }
+  .hero-scene {
+    display: flex; flex-direction: column; gap: 18px;
+    height: auto; min-height: 100%;
+    padding: calc(16px + var(--safe-t)) var(--phone-right)
+      calc(var(--phone-nav-height) + 26px + var(--safe-b)) var(--phone-left);
+  }
+  .hero-topbar { position: relative; inset: auto; gap: 8px; flex: none; flex-wrap: wrap; }
+  .hero-top-actions { gap: 6px; margin-left: auto; }
+  .hero-chip { padding: 8px; font-size: 11px; white-space: nowrap; }
+  .hero-brand-tag { display: none; }
+  .hero-switcher {
+    position: relative; inset: auto; order: 1; align-self: flex-end;
+    flex-direction: row; gap: 8px; flex: none;
+  }
+  .hero-copy {
+    position: relative; inset: auto; width: auto; order: 2;
+    margin-top: auto; padding-top: 16px; flex: none;
+  }
+  .hero-name { font-size: clamp(42px, 12vw, 64px); }
+  .hero-name small { margin-left: 8px; }
+  .hero-tags { gap: 6px; margin-top: 12px; }
+  .hero-tag { padding: 5px 9px; }
+  .hero-actions { margin-top: 18px; gap: 12px; }
+  .hero-cta { min-height: 48px; padding: 12px 20px; }
+
+  .sheet {
+    top: auto; bottom: max(8px, var(--safe-b)); transform: none;
+    width: calc(100% - var(--phone-left) - var(--phone-right));
+    max-width: 780px;
+    max-height: calc(var(--app-height) - var(--safe-t) - var(--safe-b) - 20px);
+  }
+  .sheet-head { min-height: 64px; padding: 10px 14px; flex: none; }
+  .sheet-title { min-width: 0; overflow-wrap: anywhere; }
+  .sheet-body { padding: 12px 14px 20px; min-height: 0; scroll-padding-block: 16px; }
+  .sheet-backdrop { top: var(--app-top); bottom: auto; height: var(--app-height); }
+  .sheet { bottom: calc(100% - var(--app-top) - var(--app-height) + max(8px, var(--safe-b))); }
+
+  /* 16px avoids Safari's automatic field zoom; fields can still shrink in flex rows. */
+  #app input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  #app textarea, #app select { font-size: 16px !important; min-width: 0; }
+  #app .input { min-width: 0; }
+  .btn, .a-chip, .scene-btn, .kb-btn, .rv-btn, .mic-btn, .kb-ghost,
+  .kb-paste-open, .docs-tool-btn, .cl-btn, .ptt-btn, .call-glass-btn { min-height: 44px; }
+  .icon-btn, .sheet .icon-btn, .send-btn, .call-icon-btn, .rv-iconbtn,
+  .docs-font button, .docs-tool-btn, .rv-row-example-speak, .ph-edit { min-width: 44px; min-height: 44px; }
+  .kb-head { padding: calc(12px + var(--safe-t)) var(--phone-right) 12px var(--phone-left); flex-wrap: wrap; }
+  .kb-head-actions { margin-left: auto; flex-wrap: wrap; }
+  .kb-body { padding-left: var(--phone-left); padding-right: var(--phone-right); }
+  .kb-url-form, .kb-paste-actions, .ocr-actions { flex-wrap: wrap; }
+  .kb-item { min-width: 0; }
+  .kb-block-head { flex-wrap: wrap; }
+  .kb-drop { display: grid; grid-template-columns: 38px minmax(0, 1fr); text-align: left; }
+  .kb-drop .kb-btn, .kb-drop .kb-upload-status { grid-column: 1 / -1; width: 100%; }
+  .kb-drop-copy p { font-size: 12px; line-height: 1.5; }
+
+
+  #screen-assistant .assistant-hero { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 8px 12px; }
+  #screen-assistant .assistant-sub { grid-column: 1 / -1; }
+  #screen-assistant .screen-layout { display: flex; flex-direction: column; }
+  #screen-assistant .screen-side { order: 1; width: 100%; }
+  #screen-assistant .assistant-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #screen-assistant .a-chip { padding: 10px; }
+  #screen-assistant .screen-main {
+    width: 100%; min-height: 240px;
+    height: clamp(240px, calc(var(--app-height) - var(--safe-t) - var(--safe-b) - 280px), 420px);
+  }
+  #screen-assistant .assistant-inputbar { position: sticky; bottom: 0; z-index: 2; }
+  :root.keyboard-open #screen-assistant .screen-side, :root.keyboard-open #screen-assistant .assistant-hero { display: none; }
+  :root.keyboard-open #screen-assistant .screen-main {
+    min-height: 0; height: calc(var(--app-height) - var(--safe-t) - 48px);
+  }
+  :root.keyboard-open #tabbar { display: none; }
+  :root.keyboard-open .screen { padding-bottom: 16px; }
+
+  /* The call, portrait, captions and input share the same usable viewport. */
+  .call-top {
+    top: 0; left: var(--phone-left); right: var(--phone-right);
+    padding: calc(12px + var(--safe-t)) 0 8px; gap: 10px;
+  }
+  .call-meta { padding-right: 56px; }
+  .call-name-row { gap: 5px; flex-wrap: wrap; }
+  .call-name { font-size: 22px; }
+  .call-live { margin-left: 0; letter-spacing: 0; padding: 3px 6px; }
+  .call-sub { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .call-status-icons { top: calc(17px + var(--safe-t)); right: var(--phone-right); padding: 8px; }
+  .call-status-icons .icon { display: none; }
+  .call-timer { font-size: 12px; }
+  .call-control-dock, .call.docs-open .call-control-dock {
+    left: 50%; right: auto; bottom: var(--call-dock-bottom); transform: translateX(-50%);
+    width: calc(100% - var(--phone-left) - var(--phone-right)); max-width: 390px;
+    display: grid; grid-template-columns: repeat(3, minmax(44px, 1fr)) minmax(56px, 1.2fr) repeat(2, minmax(44px, 1fr));
+    gap: 2px; padding: 6px 4px; border-radius: 24px;
+  }
+  .call-control-dock .call-icon-btn { width: 100%; height: 44px; min-width: 44px; min-height: 44px; }
+  .call-control-dock .call-talk { width: 56px; height: 56px; margin: 0; justify-self: center; }
+  #call-dialogue, .call-ptt, .call-textform {
+    left: var(--phone-left); right: var(--phone-right); width: auto;
+    max-width: none; transform: none; bottom: var(--call-content-bottom);
+  }
+  #call-dialogue {
+    max-height: calc(var(--app-height) - var(--call-content-top) - var(--call-content-bottom));
+    padding: 12px; overflow-y: auto;
+  }
+  #call-dialogue .cd-en, #call-dialogue .cd-zh { max-height: none; overflow: visible; }
+  #call-dialogue .cd-head { flex-wrap: wrap; }
+  .call-ptt { max-height: calc(var(--app-height) - var(--call-content-top) - var(--call-content-bottom)); overflow-y: auto; }
+  .call-textform { padding: 6px; }
+  .call-textform .input { width: 0; min-width: 0; flex: 1; }
+  .call-side-actions, .call.docs-open .call-side-actions {
+    left: var(--phone-left); right: auto; top: var(--call-content-top); transform: none;
+  }
+  .call.history-open .call-bubbles, .call.docs-open .call-bubbles {
+    left: var(--phone-left); right: var(--phone-right); width: auto; max-width: none;
+    top: var(--call-content-top); bottom: var(--call-content-bottom); max-height: none;
+    padding: 56px 12px 14px;
+  }
+  .call.history-open .call-side-actions {
+    left: auto; right: calc(var(--phone-right) + 8px);
+    top: calc(var(--call-content-top) + 6px);
+  }
+  .call.history-open .call-bubbles { justify-content: flex-start; mask-image: none; }
+  .call.history-open .call-bubbles::before { position: static; margin-top: 0; flex: none; }
+  .call-env-banner {
+    left: var(--phone-left); right: var(--phone-right); width: auto; transform: none;
+    top: var(--call-content-top); max-height: 110px; overflow-y: auto;
+  }
+  .mic-dock:has(.mic-extra:not([hidden])) {
+    left: var(--phone-left); right: var(--phone-right); width: auto; transform: none;
+    top: var(--call-content-top); max-height: calc(var(--app-height) - var(--call-content-top) - var(--call-content-bottom)); overflow-y: auto;
+  }
+  .call:has(#mic-extra:not([hidden])) .call-env-banner { display: none !important; }
+  .call.text-open #mic-dock, .call.history-open #mic-dock { display: none !important; }
+  .call:not(.text-open):not(.history-open):has(#mic-extra:not([hidden])) .call-side-actions { display: none; }
+  .call:not(.text-open):not(.history-open):has(#mic-extra:not([hidden])) #call-dialogue,
+  .call:not(.text-open):not(.history-open) .mic-dock:has(.mic-extra:not([hidden])) {
+    max-height: calc((var(--app-height) - var(--call-content-top) - var(--call-content-bottom) - 12px) / 2);
+  }
+  .call-hint {
+    left: var(--phone-left); right: var(--phone-right); width: auto; transform: none;
+    top: calc(var(--call-content-top) + 52px); max-height: 120px; overflow-y: auto;
+  }
+  .call-lesson {
+    top: var(--call-content-top); left: var(--phone-left); right: var(--phone-right); width: auto;
+    max-height: calc((var(--app-height) - var(--call-content-top) - var(--call-content-bottom) - 12px) / 2);
+  }
+  .call.lesson-mode #call-dialogue {
+    max-height: calc((var(--app-height) - var(--call-content-top) - var(--call-content-bottom) - 12px) / 2);
+  }
+  .cl-head { flex-wrap: wrap; }
+  .cl-actions { margin-left: auto; }
+  .call-docs {
+    left: var(--phone-left); right: var(--phone-right); top: var(--call-content-top);
+    bottom: var(--call-content-bottom); height: auto; width: auto;
+    padding: 8px 12px 12px; border-radius: 18px;
+  }
+  .call.docs-open #call-dialogue { display: none !important; }
+  .call.docs-open .call-side-actions { display: none; }
+  .call.docs-open .call-bottom { bottom: auto; }
+  .call.text-open .call-docs { bottom: calc(var(--call-content-bottom) + 64px); }
+  .call-docs-head { flex-wrap: wrap; }
+  .call-docs-tools { width: 100%; justify-content: space-between; gap: 4px; }
+  .docs-follow { min-height: 44px; }
+  .docs-font button { padding: 0 8px; font-size: 13px; }
+  .call.docs-open .call-cover { transform: none; }
+
+  .toasts, body.call-open .toasts, body.sheet-open .toasts,
+  body:has(#screen-assistant.is-active) .toasts {
+    left: var(--phone-left); right: var(--phone-right); width: auto;
+    top: calc(var(--app-top) + var(--safe-t) + 12px); bottom: auto; transform: none;
+    align-items: stretch; pointer-events: none;
+  }
+  .toast { max-width: 100%; overflow-wrap: anywhere; }
+}
+
+/* Landscape uses the width for lesson + speech instead of vertically stacking. */
+@media (max-width: 1100px) and (max-height: 500px) and (orientation: landscape) {
+  :root { --call-content-top: calc(62px + var(--safe-t)); --call-content-bottom: calc(84px + var(--safe-b)); }
+  .call-top { padding-top: calc(6px + var(--safe-t)); }
+  .call-sub, .call-live, .call-verified { display: none; }
+  .call-status-icons { top: calc(8px + var(--safe-t)); }
+  .call-lesson { right: 51%; max-height: calc(var(--app-height) - var(--call-content-top) - var(--call-content-bottom)); }
+  .call.lesson-mode #call-dialogue { left: 51%; max-height: calc(var(--app-height) - var(--call-content-top) - var(--call-content-bottom)); }
+  .call-docs-head { align-items: center; }
+  .call-docs-tools { width: auto; }
+  .call-docs-handle { display: none; }
+  .call-docs { padding-top: 4px; }
+  .hero-name { font-size: 40px; }
+}
