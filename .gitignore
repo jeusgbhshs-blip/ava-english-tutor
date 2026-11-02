@@ -13,3 +13,13 @@ docs/assets/
 *.key
 !docs/audit/evidence/*.log
 !docs/personal/evidence/*.log
+
+# Native build products
+/build/
+dist-ios/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/build/
+ios/App/DerivedData/
+*.xcuserstate
+xcuserdata/

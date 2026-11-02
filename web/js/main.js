@@ -81,7 +81,7 @@ const A = {
     appId: '',
     hasKey: false,
     keyHint: '',
-    model: '3.0',
+    model: '1.2.1.1',
     speaker: 'en_female_dacey_uranus_bigtts',
     endpoint: 'wss://openspeech.bytedance.com/api/v3/realtime/dialogue',
     resourceId: 'volc.speech.dialog',
@@ -1744,7 +1744,7 @@ function renderCoachPlaceholderIfQuiet() {
 }
 
 /* ==========================================================================
-   v1.4 语音引擎（浏览器内置 / 豆包实时语音 3.0）
+   v1.4 语音引擎（浏览器内置 / 豆包实时语音 O2.0）
    ========================================================================== */
 
 const VOLC_DEFAULT_ENDPOINT = 'wss://openspeech.bytedance.com/api/v3/realtime/dialogue'
@@ -1779,7 +1779,7 @@ function updateEnginePill() {
   D.enginePill.hidden = !show
   D.enginePill.title = A.volcFallback
     ? '豆包语音连接异常，本会话已回退浏览器语音（点击打开设置）'
-    : '当前语音引擎：豆包实时语音 3.0（点击打开设置）'
+    : '当前语音引擎：豆包实时语音 O2.0（点击打开设置）'
 }
 
 /** 应用 settings 里的语音引擎字段（GET / PUT 返回）。 */
@@ -1791,7 +1791,7 @@ function applyVoiceSettings(settings) {
     appId: String(v.appId || ''),
     hasKey: !!v.hasKey,
     keyHint: String(v.keyHint || ''),
-    model: String(v.model || '3.0'),
+    model: String(v.model || '1.2.1.1'),
     speaker: String(v.speaker || VOLC_DEFAULT_SPEAKER),
     endpoint: String(v.endpoint || VOLC_DEFAULT_ENDPOINT),
     resourceId: String(v.resourceId || VOLC_DEFAULT_RESOURCE),
@@ -1804,6 +1804,24 @@ function applyVoiceSettings(settings) {
 function updateVoiceEngineUI() {
   const volcSelected = !!(D.engineVolc && D.engineVolc.checked)
   if (D.volcConfig) D.volcConfig.hidden = !volcSelected
+  updateVolcModelWarning()
+}
+
+function updateVolcModelWarning() {
+  if (!D.volcModelWarning) return
+  let message = ''
+  const model = D.volcModel?.value.trim() || '1.2.1.1'
+  const endpoint = D.volcEndpoint?.value.trim() || VOLC_DEFAULT_ENDPOINT
+  try {
+    const url = new URL(endpoint)
+    if (url.hostname === 'openspeech.bytedance.com' && url.pathname === '/api/v3/duplex/realtime/dialogue') {
+      message = '此地址属于 Seeduplex 3.0，本版本尚未接入。请恢复原实时语音服务地址并测试连接。'
+    } else if (url.hostname === 'openspeech.bytedance.com' && url.pathname === '/api/v3/realtime/dialogue' && model === '3.0') {
+      message = '已保存的模型 3.0 与当前接口不兼容。请改为 1.2.1.1（O2.0）并测试连接；原设置未被自动修改。'
+    }
+  } catch {}
+  D.volcModelWarning.textContent = message
+  D.volcModelWarning.hidden = !message
 }
 
 /** 设置页：填充语音引擎相关字段。 */
@@ -1814,7 +1832,7 @@ function populateVoiceEngineSettings() {
   D.engineVolc.checked = A.voiceEngine === 'volc'
   const v = A.volc || {}
   if (D.volcAppId) D.volcAppId.value = v.appId || ''
-  if (D.volcModel) D.volcModel.value = v.model || '3.0'
+  if (D.volcModel) D.volcModel.value = v.model || '1.2.1.1'
   if (D.volcSpeaker) D.volcSpeaker.value = v.speaker || VOLC_DEFAULT_SPEAKER
   if (D.volcEndpoint) D.volcEndpoint.value = v.endpoint || VOLC_DEFAULT_ENDPOINT
   if (D.volcResource) D.volcResource.value = v.resourceId || VOLC_DEFAULT_RESOURCE
@@ -1829,7 +1847,7 @@ function populateVoiceEngineSettings() {
   if (D.volcKeyHint) {
     D.volcKeyHint.innerHTML = v.hasKey
       ? `已保存凭据：<code>${esc(v.keyHint || '已配置')}</code>，界面永不回显原文。`
-      : '凭据只保存在本机 <code>data/settings.json</code>，界面永不回显原文。'
+      : '凭据只保存在所连接的 Ava 服务端，界面永不回显原文。'
   }
   if (D.volcTestResult) {
     D.volcTestResult.textContent = ''
@@ -1842,7 +1860,7 @@ function populateVoiceEngineSettings() {
 function collectVolcPatch() {
   const volc = {
     appId: D.volcAppId ? D.volcAppId.value.trim() : '',
-    model: (D.volcModel ? D.volcModel.value.trim() : '') || '3.0',
+    model: (D.volcModel ? D.volcModel.value.trim() : '') || '1.2.1.1',
     speaker: (D.volcSpeaker ? D.volcSpeaker.value.trim() : '') || VOLC_DEFAULT_SPEAKER,
     endpoint: (D.volcEndpoint ? D.volcEndpoint.value.trim() : '') || VOLC_DEFAULT_ENDPOINT,
     resourceId: (D.volcResource ? D.volcResource.value.trim() : '') || VOLC_DEFAULT_RESOURCE,
@@ -1870,7 +1888,7 @@ async function testVolcConnection() {
     if (result && result.ok) {
       const latency = Number(result.latencyMs) || 0
       if (D.volcTestResult) {
-        D.volcTestResult.textContent = `连接成功 · ${result.model || config.model || '3.0'} · ${latency}ms`
+        D.volcTestResult.textContent = `连接成功 · ${result.model || config.model || '1.2.1.1'} · ${latency}ms`
         D.volcTestResult.className = 'test-result ok'
       }
     } else if (D.volcTestResult) {
@@ -1898,7 +1916,7 @@ async function clearVolcCredentials() {
     }
     A.volc.hasKey = false
     A.volc.keyHint = ''
-    if (D.volcKeyHint) D.volcKeyHint.innerHTML = '凭据只保存在本机 <code>data/settings.json</code>，界面永不回显原文。'
+    if (D.volcKeyHint) D.volcKeyHint.innerHTML = '凭据只保存在所连接的 Ava 服务端，界面永不回显原文。'
     if (D.volcApiKey) D.volcApiKey.placeholder = '填写 API Key（与 Access Token 二选一）'
     if (D.volcToken) D.volcToken.placeholder = '填写 Access Token（没有 API Key 时使用）'
     ui.toast('已清除豆包语音凭据', 'info')
@@ -2736,6 +2754,8 @@ function bindEvents() {
   D.btnTestVolc?.addEventListener('click', () => void testVolcConnection())
   D.btnClearVolc?.addEventListener('click', () => void clearVolcCredentials())
   D.volcConfig?.addEventListener('submit', (event) => event.preventDefault())
+  D.volcModel?.addEventListener('input', updateVolcModelWarning)
+  D.volcEndpoint?.addEventListener('input', updateVolcModelWarning)
   window.addEventListener('pagehide', () => {
     try {
       if (A.doubao && typeof A.doubao.dispose === 'function') A.doubao.dispose()
@@ -3060,6 +3080,7 @@ function cacheDom() {
   D.volcApiKey = $('#volc-apikey')
   D.volcToken = $('#volc-token')
   D.volcModel = $('#volc-model')
+  D.volcModelWarning = $('#volc-model-warning')
   D.volcSpeaker = $('#volc-speaker')
   D.volcEndpoint = $('#volc-endpoint')
   D.volcResource = $('#volc-resource')

@@ -6,14 +6,16 @@
  */
 import {
   $, esc, icon, toast, ui, M, characterById, sleep,
-  kbList, kbUpload, kbImportUrl, kbGet, kbDelete, postJSON,
+  kbList, kbImportUrl, kbGet, kbDelete, postJSON,
 } from './core.js'
+import { apiFetch } from '../backend.js'
 import { libraryBlockHtml, refreshLibraryCard, openLibrarySheet, startTodayLesson, completeToday } from './library.js'
 
-const MAX_FILE_SIZE = 12 * 1024 * 1024
+let uploadLimits = { maxFileBytes: 100 * 1024 * 1024, maxTextChars: 60000 }
+let activeUploadController = null
 // 与 lib/docExtract.js 的上传合同一致；拖拽与文件选择使用同一份扩展名列表。
 const FILE_EXTENSIONS = [
-  '.txt', '.md', '.markdown', '.text', '.csv', '.json', '.log',
+  '.txt', '.md', '.markdown', '.text', '.csv', '.tsv', '.json', '.log',
   '.doc', '.docx', '.rtf', '.odt', '.html', '.htm',
   '.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.heic', '.heif', '.tif', '.tiff',
   '.pptx', '.pptm', '.pdf',
@@ -118,7 +120,7 @@ function panelHtml() {
             <span class="kb-drop-orb">${icon('book')}</span>
             <div class="kb-drop-copy">
               <strong>拖拽文件到这里</strong>
-              <p>或点击选择文件，单文件 ≤ 12MB</p>
+              <p id="kb-upload-limit">${esc(uploadLimitLabel())}</p>
             </div>
             <button type="button" class="kb-btn kb-btn-primary" id="kb-file-btn">${icon('spark')}选择文件</button>
             <div class="kb-upload-status" id="kb-upload-status" hidden></div>
@@ -362,43 +364,56 @@ function stopPoll() {
 }
 
 /* ------------------------------ 上传 / 导入 ------------------------------ */
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const raw = String(reader.result || '')
-      const comma = raw.indexOf(',')
-      resolve(comma >= 0 ? raw.slice(comma + 1) : raw)
+function uploadLimitLabel() {
+  const mb = Math.round(uploadLimits.maxFileBytes / 1024 / 1024)
+  return `选择文件，单文件 ≤ ${mb}MB；每份最多提取 ${Math.round(uploadLimits.maxTextChars / 1000)}k 字符`
+}
+
+async function refreshUploadLimits() {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 10000)
+  try {
+    const response = await apiFetch('/api/kb/upload-limits', { signal: controller.signal })
+    if (!response.ok) return
+    const data = await response.json()
+    if (data.ok && Number.isFinite(data.maxFileBytes) && data.maxFileBytes > 0) {
+      uploadLimits = { maxFileBytes: data.maxFileBytes, maxTextChars: data.maxTextChars || 60000 }
+      const label = $('#kb-upload-limit')
+      if (label) label.textContent = uploadLimitLabel()
     }
-    reader.onerror = () => reject(new Error('读取文件失败'))
-    reader.readAsDataURL(file)
-  })
+  } catch { /* An upload will report the actual connection error if offline. */ }
+  finally { clearTimeout(timer) }
+}
+
+async function uploadFileBinary(file, preview = false) {
+  const controller = new AbortController()
+  activeUploadController = controller
+  let timedOut = false
+  const timer = setTimeout(() => { timedOut = true; controller.abort() }, 5 * 60 * 1000)
+  try {
+    const endpoint = preview ? '/api/kb/preview-file' : '/api/kb/upload'
+    const response = await apiFetch(`${endpoint}?name=${encodeURIComponent(file.name)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: file,
+      signal: controller.signal,
+    })
+    let result
+    try { result = await response.json() }
+    catch { throw new Error(`上传服务返回异常（${response.status}），请检查服务器和文件大小限制`) }
+    if (!response.ok || result.ok === false) throw new Error(result.error || `上传失败（${response.status}）`)
+    return result
+  } catch (error) {
+    if (timedOut) throw new Error('上传或文字提取超时，请检查网络或拆分文件后重试')
+    throw error
+  } finally {
+    clearTimeout(timer)
+    if (activeUploadController === controller) activeUploadController = null
+  }
 }
 
 function isImageFileName(name) {
   return /\.(png|jpe?g|webp|gif|bmp|heic|heif|tif|tiff)$/i.test(String(name || ''))
-}
-
-function readFileBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = String(reader.result || '')
-      const comma = result.indexOf(',')
-      resolve(comma >= 0 ? result.slice(comma + 1) : result)
-    }
-    reader.onerror = () => reject(new Error('读取文件失败'))
-    reader.readAsDataURL(file)
-  })
-}
-
-function readFileDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(new Error('读取文件失败'))
-    reader.readAsDataURL(file)
-  })
 }
 
 /** 一张图片占有一个弹层；关闭/替换会结束等待，但迟到请求不能操作其他弹层。 */
@@ -426,6 +441,7 @@ function createImageSheet() {
 /** 图片队列只在保存或明确跳过后继续；关闭、返回或替换弹层取消剩余队列。 */
 async function reviewImageFile(file, generation = importGeneration) {
   const sheet = createImageSheet()
+  const dataUrl = URL.createObjectURL(file)
   importSheet = sheet
   const current = () => generation === importGeneration && sheet.isCurrent()
   const recognize = async () => {
@@ -435,13 +451,7 @@ async function reviewImageFile(file, generation = importGeneration) {
     if (cancel) cancel.onclick = () => sheet.finish('cancelled')
     setUploadStatus(`正在识别「${file.name}」…`, 'busy')
     try {
-      const [dataBase64, dataUrl] = await Promise.all([readFileBase64(file), readFileDataUrl(file)])
-      if (!current()) return
-      const res = await postJSON(
-        '/api/kb/preview-file',
-        { name: file.name, dataBase64, mime: file.type || 'application/octet-stream' },
-        { timeoutMs: 120000 },
-      )
+      const res = await uploadFileBinary(file, true)
       if (!current()) return
       if (!res || res.ok === false) throw new Error((res && res.error) || '图片文字识别失败')
       setUploadStatus(`「${file.name}」识别完成，请校对后入库`, 'ok')
@@ -463,6 +473,8 @@ async function reviewImageFile(file, generation = importGeneration) {
   try {
     return await sheet.result
   } finally {
+    activeUploadController?.abort()
+    URL.revokeObjectURL(dataUrl)
     if (importSheet === sheet) importSheet = null
   }
 }
@@ -538,11 +550,12 @@ async function uploadFiles(files) {
   const generation = ++importGeneration
   setBusy(true)
   try {
+    await refreshUploadLimits()
     for (const file of list) {
       if (generation !== importGeneration) return false
       if (!file || !file.name) continue
-      if (file.size > MAX_FILE_SIZE) {
-        toast(`「${file.name}」超过 12MB，无法上传`, 'bad', 3200)
+      if (file.size > uploadLimits.maxFileBytes) {
+        toast(`「${file.name}」超过 ${Math.round(uploadLimits.maxFileBytes / 1024 / 1024)}MB，无法上传`, 'bad', 3200)
         continue
       }
       const ext = String(file.name).toLowerCase().match(/\.[^.]+$/)
@@ -555,15 +568,15 @@ async function uploadFiles(files) {
         if (result === 'cancelled') return false
         continue
       }
-      setUploadStatus(`正在上传「${file.name}」…`, 'busy')
+      setUploadStatus(`正在上传并提取「${file.name}」，大文件可能需要一些时间…`, 'busy')
       try {
-        const dataBase64 = await fileToBase64(file)
-        if (generation !== importGeneration) return false
-        const res = await kbUpload({ name: file.name, dataBase64, mime: file.type || 'application/octet-stream' })
+        const res = await uploadFileBinary(file)
         if (generation !== importGeneration) return false
         if (!res || res.ok === false) throw new Error((res && res.error) || '上传失败')
-        toast(`「${file.name}」已加入知识库`, 'ok', 2600)
-        setUploadStatus(res.message || `「${file.name}」已入库，可按原文学习`, 'ok')
+        const warnings = Array.isArray(res.extracted?.warnings) ? res.extracted.warnings : []
+        const notice = warnings.join(' ')
+        toast(notice ? `「${file.name}」已入库。${notice}` : `「${file.name}」已加入知识库`, notice ? 'info' : 'ok', notice ? 7000 : 2600)
+        setUploadStatus([res.message || `「${file.name}」已入库，可按原文学习`, notice].filter(Boolean).join(' '), 'ok')
       } catch (err) {
         if (generation !== importGeneration) return false
         const message = (err && err.message) || '上传失败，请稍后重试'
@@ -835,6 +848,7 @@ export function openKbPanel() {
   host.setAttribute('aria-modal', 'true')
   host.tabIndex = -1
   renderKbPanel()
+  void refreshUploadLimits()
   if (!document.body.classList.contains('sheet-open')) {
     const target = $('#kb-close', host) || host
     if (usableKbFocus(target)) target.focus({ preventScroll: true })
@@ -847,6 +861,7 @@ export function closeKbPanel() {
   const host = $('#kb-screen')
   KB.open = false
   importGeneration += 1
+  activeUploadController?.abort()
   if (importSheet) importSheet.finish('cancelled')
   importSheet = null
   setBusy(false)

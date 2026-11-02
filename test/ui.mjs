@@ -1876,7 +1876,7 @@ async function main() {
           assert.equal(st.volcChecked, false, '默认不应选中豆包引擎')
           assert.equal(st.cfgHidden, true, '未选豆包时配置区应隐藏')
           assert.deepEqual(st.fields, [], `豆包设置字段应齐全，缺少 ${JSON.stringify(st.fields)}`)
-          assert.equal(st.model, '3.0', '模型版本默认应为 3.0')
+          assert.equal(st.model, '1.2.1.1', '模型版本默认应为 O2.0 的 1.2.1.1')
           assert.equal(st.speaker, 'en_female_dacey_uranus_bigtts', '默认音色应正确')
           assert.match(st.endpoint, /^wss:\/\//, '默认服务地址应为 wss://')
           assert.equal(st.resource, 'volc.speech.dialog', '默认资源 ID 应正确')

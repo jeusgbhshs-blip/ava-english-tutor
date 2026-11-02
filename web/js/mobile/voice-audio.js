@@ -24,6 +24,7 @@
  */
 
 import { tts } from '../speech.js'
+import { apiFetch } from '../backend.js'
 
 /** TTS 接口。 */
 const TTS_ENDPOINT = '/api/tts'
@@ -160,6 +161,27 @@ export function clearCharacterAudioCache() {
 
 /** @type {HTMLAudioElement|null} */
 let currentAudio = null
+/** Unlock Web Audio during the tap; synthesized audio can arrive after activation expires. */
+let characterAudioContext = null
+let currentBufferSource = null
+let currentBufferFinish = null
+let currentRequestController = null
+
+export function prepareCharacterAudio() {
+  if (typeof window === 'undefined') return false
+  const Ctx = window.AudioContext || window.webkitAudioContext
+  if (!Ctx) return false
+  try {
+    if (!characterAudioContext || characterAudioContext.state === 'closed') {
+      characterAudioContext = new Ctx({ latencyHint: 'interactive' })
+    }
+    if (characterAudioContext.state !== 'running') {
+      Promise.resolve(characterAudioContext.resume()).catch(() => {})
+    }
+    return true
+  } catch { return false }
+}
+
 /** 当前播放的 objectURL（stop 时 revoke） */
 let currentUrl = ''
 /** 播放代次：新播放/stop 时自增，旧异步回调据此静默退出 */
@@ -177,8 +199,14 @@ let currentFallbackFinish = null
  * @returns {boolean} 是否确实停掉了内容
  */
 export function stopCharacterText() {
-  const hadContent = !!currentAudio || currentFallbackActive
+  const hadContent = !!currentAudio || !!currentBufferSource || !!currentRequestController || currentFallbackActive
   currentSeq += 1
+  if (currentRequestController) {
+    const controller = currentRequestController
+    currentRequestController = null
+    try { controller.abort() } catch { /* already cancelled */ }
+  }
+  if (currentBufferFinish) currentBufferFinish({ ok: false, cancelled: true })
   const fallbackFinish = currentFallbackFinish
   currentFallbackFinish = null
   if (fallbackFinish) {
@@ -240,13 +268,14 @@ function normalizeVolume(volume) {
 }
 
 /**
- * 请求 /api/tts 并返回 mp3 Blob（30s 超时）。
+ * 请求 /api/tts 并返回 mp3 Blob（75s 超时；停止时立即取消）。
  * @param {string} text
  * @param {string} characterId
  * @returns {Promise<Blob>}
  */
 async function fetchTtsBlob(text, characterId) {
   const controller = new AbortController()
+  currentRequestController = controller
   const timer = setTimeout(() => {
     try {
       controller.abort()
@@ -255,7 +284,7 @@ async function fetchTtsBlob(text, characterId) {
     }
   }, REQUEST_TIMEOUT_MS)
   try {
-    const res = await fetch(TTS_ENDPOINT, {
+    const res = await apiFetch(TTS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify({ text, characterId }),
@@ -275,7 +304,51 @@ async function fetchTtsBlob(text, characterId) {
     return blob
   } finally {
     clearTimeout(timer)
+    if (currentRequestController === controller) currentRequestController = null
   }
+}
+
+/** Play through the context unlocked by the tap, preserving iOS user activation. */
+async function playDecodedAudioBlob(blob, options, seq) {
+  const ctx = characterAudioContext
+  if (!ctx || ctx.state !== 'running' || typeof ctx.decodeAudioData !== 'function') return null
+  let buffer
+  try { buffer = await ctx.decodeAudioData(await blob.arrayBuffer()) } catch { return null }
+  if (seq !== currentSeq) return { ok: false, cancelled: true }
+  if (ctx.state !== 'running') return { ok: false, error: 'audio-interrupted' }
+  return new Promise((resolve) => {
+    let source = null
+    let gain = null
+    let settled = false
+    const settle = (result) => {
+      if (settled) return
+      settled = true
+      if (currentBufferFinish === settle) currentBufferFinish = null
+      if (currentBufferSource === source) currentBufferSource = null
+      if (source) {
+        source.onended = null
+        try { source.stop() } catch { /* already ended */ }
+        try { source.disconnect() } catch { /* already disconnected */ }
+      }
+      try { gain?.disconnect() } catch { /* already disconnected */ }
+      resolve(result)
+    }
+    try {
+      source = ctx.createBufferSource()
+      gain = ctx.createGain()
+      source.buffer = buffer
+      const rate = Number(options.rate)
+      source.playbackRate.value = Number.isFinite(rate) && rate > 0 ? Math.min(2, Math.max(0.5, rate)) : 1
+      gain.gain.value = normalizeVolume(options.volume)
+      source.connect(gain)
+      gain.connect(ctx.destination)
+      source.onended = () => settle({ ok: true })
+      currentBufferSource = source
+      currentBufferFinish = settle
+      source.start()
+      safeCall(options.onPlaying)
+    } catch { settle({ ok: false, error: 'audio-error' }) }
+  })
 }
 
 /**
@@ -471,6 +544,7 @@ export async function playCharacterText(text, options = {}) {
   // 同一时间只播一条：静默停掉上一条（不触发上一条 onEnd）
   stopCharacterText()
   const seq = ++currentSeq
+  prepareCharacterAudio()
   const key = cacheKey(characterId, content)
 
   try {
@@ -482,14 +556,17 @@ export async function playCharacterText(text, options = {}) {
     }
     if (seq !== currentSeq) return false
 
-    const result = await playAudioBlob(blob, {
+    const playbackOptions = {
       rate: Number.isFinite(rateOption) && rateOption > 0 ? rateOption : undefined,
       volume: opts.volume,
       onPlaying: () => {
         if (seq !== currentSeq) return
         safeCall(opts.onStart, { engine: 'api', text: content, characterId })
       },
-    })
+    }
+    let result = await playDecodedAudioBlob(blob, playbackOptions, seq)
+    if (seq !== currentSeq) return false
+    if (!result) result = await playAudioBlob(blob, playbackOptions)
     if (seq !== currentSeq) return false
     if (result.ok) {
       safeCall(opts.onEnd, { engine: 'api', ok: true, text: content, characterId })
@@ -512,8 +589,19 @@ export async function playCharacterText(text, options = {}) {
   })
 }
 
+// No audio or pending synthesis should continue after the app is backgrounded.
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') stopCharacterText()
+  })
+}
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('pagehide', () => stopCharacterText())
+}
+
 export default {
   playCharacterText,
+  prepareCharacterAudio,
   stopCharacterText,
   characterPitch,
   characterRate,

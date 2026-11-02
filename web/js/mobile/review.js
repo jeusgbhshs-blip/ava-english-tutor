@@ -1,3 +1,4 @@
+import { apiFetch } from '../backend.js'
 /**
  * Ava 手机版 · 第 6 个 Tab「复习」
  *
@@ -309,7 +310,7 @@ async function fetchJSON(path, { method = 'GET', body = null, timeoutMs = 20000 
   const controller = typeof AbortController === 'function' ? new AbortController() : null
   const timer = controller ? setTimeout(() => controller.abort(), Math.max(1500, timeoutMs)) : null
   try {
-    const res = await fetch(path, {
+    const res = await apiFetch(path, {
       method,
       headers: body == null ? undefined : { 'content-type': 'application/json' },
       body: body == null ? undefined : JSON.stringify(body),

@@ -12,7 +12,7 @@
     "appId": "REPLACE_WITH_VOLC_APP_ID",
     "apiKey": "REPLACE_WITH_VOLC_API_KEY",
     "accessToken": "",
-    "model": "3.0",
+    "model": "1.2.1.1",
     "speaker": "en_female_dacey_uranus_bigtts",
     "endpoint": "wss://openspeech.bytedance.com/api/v3/realtime/dialogue",
     "resourceId": "volc.speech.dialog"

@@ -21,7 +21,8 @@ jobs:
         with:
           node-version-file: .node-version
           package-manager-cache: false
-      # The application has no npm dependencies; no npm install / secrets are required.
+      # Server tests use Node built-ins; native build dependencies are installed in ios.yml.
+      # These checks require neither npm install nor provider secrets.
       - run: npm run check
       - run: npm test
       - run: npm run test:e2e

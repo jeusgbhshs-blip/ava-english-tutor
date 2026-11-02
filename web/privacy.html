@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Ava 数据处理说明</title><style>body{margin:0;background:#fffdf8;color:#243d37;font:16px/1.8 system-ui,sans-serif}main{max-width:680px;margin:auto;padding:calc(24px + env(safe-area-inset-top)) 24px calc(40px + env(safe-area-inset-bottom))}h1{font-size:28px}h2{font-size:20px;margin-top:28px}a{color:#245d50}button{font:inherit;padding:10px 18px;border-radius:12px;border:1px solid #aebfb4;background:white;color:#243d37}</style></head>
+<body><main><h1>Ava 数据处理说明</h1><p>开发测试版本 · 更新于 2026 年 11 月 2 日</p>
+<p>Ava 是英语学习工具。本版本连接你指定的个人 Ava 服务。该服务保存学习资料和进度；同一服务的访问者共享该服务的数据。请仅连接你信任的个人服务。</p>
+<h2>语音和 AI 处理</h2><p>你开始语音练习后，麦克风音频经 Ava 服务转发给豆包（火山引擎）实时语音服务，用于识别和生成回复。点读文字也会发送给配置的语音合成服务。课程生成、问答、总结和资料增强会将相关文字或资料片段发送给服务端配置的 AI 提供商。</p>
+<p>进入语音通话并授予麦克风权限后，应用会开启麦克风用于音量检测和通话预热；预热期间不向服务端发送麦克风音频。点击麦克风开始说话后，声音才会上传用于实时对话。挂断、切到后台或音频中断时停止采集。本版本不主动保存原始麦克风录音。对话转写、摘要、单词和学习记录可能用于课程与复习并保存在你的设备或所连接的服务中。</p>
+<h2>文件和学习记录</h2><p>上传文件会发送到你连接的 Ava 服务，提取文字后用于资料带读和知识库。大文件上传的临时副本在处理完成或失败后清理。你可以在知识库中删除资料；设备上的学习状态和服务端学习记录分别保存。iPhone 应用按服务地址隔离本机学习状态；切换服务不会读取或改写其他服务的本机记录。删除资料不会自动删除已经生成的对话或复习记录。</p>
+<h2>连接凭据</h2><p>iPhone 应用使用系统钥匙串保存服务地址、访问码和数据处理同意状态。浏览器版本仅在当前浏览器会话中保存连接信息。豆包及其他 AI 提供商的密钥由服务端保存，不放入应用安装包。</p>
+<h2>你的控制</h2><p>你可以在 iPhone 的系统设置中撤销麦克风权限，并随时停止对话。在应用的连接设置中选择「断开连接」，会移除本机钥匙串中的访问码并返回连接页面；本机学习记录和服务端资料会保留，重新连接同一服务后仍可使用。删除服务端的全部学习记录，需要由你的 Ava 服务管理员处理。请勿把个人服务的访问码分享给不应访问这些资料的人。</p>
+<h2>公开发行前</h2><p>这是一份开发测试阶段的数据处理说明。公开发行前，运营方需要补充真实的运营主体、联系方式、数据保留与删除期限、实际 AI 提供商，以及与最终部署一致的完整隐私政策。</p>
+<p><a href="./index.html">返回 Ava</a></p></main></body></html>

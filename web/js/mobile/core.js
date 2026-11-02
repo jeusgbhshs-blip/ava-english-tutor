@@ -1,3 +1,4 @@
+import { apiFetch } from '../backend.js'
 /**
  * Ava 手机版 · 核心状态 / API 包装 / 通用 UI
  * 只 import 现有模块（api.js / speech.js / store.js 可按需），不修改它们。
@@ -359,7 +360,7 @@ async function requestJSON(path, { method = 'GET', body = null, timeoutMs = 3000
   const controller = typeof AbortController === 'function' ? new AbortController() : null
   const timer = controller ? setTimeout(() => controller.abort(), Math.max(1000, timeoutMs)) : null
   try {
-    const res = await fetch(path, {
+    const res = await apiFetch(path, {
       method,
       headers: body == null ? undefined : { 'content-type': 'application/json' },
       body: body == null ? undefined : JSON.stringify(body),

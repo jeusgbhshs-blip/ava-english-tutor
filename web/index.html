@@ -8,6 +8,7 @@
 <title>Ava · AI 数字人英语老师</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%235eead4'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%230a1020'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='url(%23g)' stroke-width='2.5' opacity='.9'/%3E%3Cpath d='M23 42 32 20l9 22M27 36h10' fill='none' stroke='url(%23g)' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="./css/app.css">
+<link rel="stylesheet" href="./css/native.css">
 </head>
 <body>
 <!-- 图标精灵：全部内联 SVG，无外部资源 -->
@@ -85,7 +86,7 @@
 
     <div class="topbar-right">
       <a class="btn btn-ghost btn-sm" href="/mobile" data-return-mobile hidden>返回主界面</a>
-      <button type="button" class="engine-pill" id="engine-pill" hidden title="当前语音引擎：豆包实时语音 3.0（点击修改）" aria-label="当前语音引擎：豆包实时语音，点击打开设置">
+      <button type="button" class="engine-pill" id="engine-pill" hidden title="当前语音引擎：豆包实时语音 O2.0（点击修改）" aria-label="当前语音引擎：豆包实时语音，点击打开设置">
         <span class="engine-dot"></span>豆包语音
       </button>
       <button type="button" class="demo-pill" id="demo-pill" hidden title="未配置 API Key：Ava 使用内置脚本演示。点击填入 Key 升级为真 AI。" aria-label="演示模式：点击打开设置，填入 API Key 升级为真 AI">
@@ -307,7 +308,7 @@
           <label class="radio-card" for="engine-volc">
             <input type="radio" name="voice-engine" id="engine-volc" value="volc">
             <span class="radio-card-body">
-              <span class="radio-card-title">豆包实时语音 3.0</span>
+              <span class="radio-card-title">豆包实时语音 O2.0</span>
               <span class="radio-card-desc">更低延迟、更自然 · 自由对话 / 角色扮演生效</span>
             </span>
           </label>
@@ -318,7 +319,7 @@
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-alert"></use></svg>
             <div>
               <strong>音频会发送到火山引擎</strong>
-              <p>需要火山账号已开通「端到端实时语音」；连接失败会自动回退浏览器语音。凭据只保存在本机，界面不回显。</p>
+              <p>需要火山账号已开通「端到端实时语音」；连接失败会自动回退浏览器语音。凭据只保存在所连接的 Ava 服务端，界面不回显。</p>
             </div>
           </div>
           <label class="field">
@@ -336,7 +337,9 @@
           <div class="volc-grid">
             <label class="field">
               <span class="field-label">模型版本</span>
-              <input type="text" id="volc-model" class="input" placeholder="3.0" spellcheck="false">
+              <input type="text" id="volc-model" class="input" placeholder="1.2.1.1" spellcheck="false" aria-describedby="volc-model-hint volc-model-warning">
+              <span class="field-hint" id="volc-model-hint">默认 1.2.1.1（O2.0，Dacey 英文音色）。Seeduplex 3.0 使用另一套协议，本版本尚未接入。</span>
+              <span class="field-hint" id="volc-model-warning" role="status" hidden></span>
             </label>
             <label class="field">
               <span class="field-label">音色 ID</span>
@@ -508,6 +511,6 @@
   <div class="noscript">Ava 需要启用 JavaScript 才能运行，请在浏览器设置中开启后刷新页面。</div>
 </noscript>
 
-<script type="module" src="./js/main.js"></script>
+<script type="module" src="./js/native-bootstrap.js?entry=settings"></script>
 </body>
 </html>

@@ -152,7 +152,7 @@ function harness() {
   const timers = new Map();
   let timerId = 0;
   const context = vm.createContext({
-    console, document, Element: Node, M: { activeCharId: 'maya' }, ui,
+    console, document, AbortController, apiFetch: async () => ({ ok: true, json: async () => ({ ok: true, maxFileBytes: 100 * 1024 * 1024, maxTextChars: 60000 }) }), Element: Node, M: { activeCharId: 'maya' }, ui,
     $: (selector, root = document) => root.querySelector(selector), esc: String, icon: () => '', toast() {}, sleep: async () => {},
     characterById: id => ({ id }), kbList: async () => ({ ok: true, docs: [] }),
     kbUpload: async () => ({}), kbImportUrl: async () => ({}), kbGet: async () => ({}), kbDelete: async () => ({}), postJSON: async () => ({}),

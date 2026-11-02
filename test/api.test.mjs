@@ -148,6 +148,7 @@ import { wordKey, __test__ as __reviewTest } from '../lib/review.js'
 import { Translator, cleanTranslation, translateTexts } from '../lib/translator.js'
 import {
   MAX_TEXT_CHARS,
+  MAX_UPLOAD_BYTES,
   SUPPORTED_EXTENSIONS,
   extOf,
   extractDocxZipText,
@@ -1757,7 +1758,7 @@ describe('v1.3 lib/docExtract 文档提取', () => {
   test('extractText：错误路径中文提示（空/超大/不支持/扫描版/二进制造假 txt）', async () => {
     await assert.rejects(() => extractText({ filename: 'empty.txt', buffer: Buffer.alloc(0) }), /文件为空/)
     await assert.rejects(
-      () => extractText({ filename: 'big.pdf', buffer: Buffer.alloc(12 * 1024 * 1024 + 1, 0x41) }),
+      () => extractText({ filename: 'big.pdf', buffer: Buffer.alloc(MAX_UPLOAD_BYTES + 1, 0x41) }),
       /文件太大/,
     )
     const unsupportedBuf = await readFixture('unsupported.exe')
@@ -2768,7 +2769,7 @@ describe('v1.4 lib/volcRealtime 客户端', () => {
     assert.match(cfg.dialog.system_role, /friendly teacher/)
     // 默认值兜底
     const defaults = buildSessionConfig({})
-    assert.equal(defaults.dialog.extra.model, '3.0')
+    assert.equal(defaults.dialog.extra.model, '1.2.1.1')
     assert.equal(defaults.tts.speaker, 'en_female_dacey_uranus_bigtts')
     assert.equal(defaults.dialog.system_role, '')
   })
@@ -2905,7 +2906,7 @@ describe('v1.4 lib/config 语音引擎设置', () => {
   test('normalizeSettings：volc 默认值、voiceEngine 白名单、非法 endpoint 回退', () => {
     const def = normalizeSettings({})
     assert.equal(def.voiceEngine, 'browser')
-    assert.equal(def.volc.model, '3.0')
+    assert.equal(def.volc.model, '1.2.1.1')
     assert.equal(def.volc.speaker, 'en_female_dacey_uranus_bigtts')
     assert.match(def.volc.endpoint, /^wss:\/\/openspeech\.bytedance\.com/)
     assert.equal(def.volc.resourceId, 'volc.speech.dialog')
@@ -3150,7 +3151,7 @@ describe('v1.5 lib/translator 翻译服务', () => {
     assert.deepEqual(textCfg.dialog.extra.output_modalities, ['text'])
     assert.equal(textCfg.dialog.bot_name, 'Translator')
     const voiceCfg = buildSessionConfig({ volc: { model: '3.0', speaker: 'spk' }, persona: 'ava' })
-    assert.equal(voiceCfg.dialog.extra.input_mod, undefined)
+    assert.equal(voiceCfg.dialog.extra.input_mod, 'keep_alive')
     assert.equal(voiceCfg.dialog.bot_name, 'Ava')
     assert.equal(voiceCfg.dialog.extra.model, '3.0')
   })

@@ -108,14 +108,25 @@ function kbHarness(overrides = {}) {
   const sheets = sheetHarness()
   const notices = []
   const requests = []
-  class FileReader {
-    readAsDataURL() {
-      this.result = 'data:image/png;base64,ZmFrZQ=='
-      queueMicrotask(() => this.onload?.())
-    }
+  const binaryRequests = []
+  const revokedUrls = []
+  const defaultPost = async (path, body) => {
+    requests.push({ path, body })
+    return { ok: true, text: 'A sufficiently long English text for proofreading.', kind: 'image' }
+  }
+  const post = overrides.postJSON || defaultPost
+  const apiFetch = async (path, init = {}) => {
+    const endpoint = new URL(path, 'http://ava.test').pathname
+    if (endpoint === '/api/kb/upload-limits') return { ok: true, json: async () => ({ ok: true, maxFileBytes: 100 * 1024 * 1024, maxTextChars: 60000 }) }
+    binaryRequests.push({ path, ...init })
+    const payload = endpoint === '/api/kb/upload'
+      ? await (overrides.kbUpload || (async () => ({ ok: true })))(init.body)
+      : await post(endpoint, { name: init.body.name })
+    return { ok: true, status: 200, json: async () => payload }
   }
   const h = isolatedModule('kb.js', {
-    ...sheets, Element: FakeElement, FileReader, M: {},
+    ...sheets, Element: FakeElement, AbortController, apiFetch,
+    URL: { createObjectURL: (file) => `blob:ava-${file.name}`, revokeObjectURL: (url) => revokedUrls.push(url) }, M: {},
     $: (selector) => sheets.document.querySelector(selector),
     esc: String, icon: () => '', sleep: () => Promise.resolve(),
     toast: (message, type) => notices.push({ message, type }),
@@ -123,14 +134,11 @@ function kbHarness(overrides = {}) {
     kbDelete: async () => ({ ok: true }),
     kbUpload: async () => ({ ok: true }),
     kbImportUrl: async () => ({ ok: true }),
-    postJSON: async (path, body) => {
-      requests.push({ path, body })
-      return { ok: true, text: 'A sufficiently long English text for proofreading.', kind: 'image' }
-    },
+    postJSON: post,
     ...overrides,
   }, 'KB, uploadFiles, reviewImageFile, openPasteSheet, confirmDelete, closeKbPanel, docStatus, statusText, ACCEPT')
   h.KB.open = true
-  return { ...h, ...sheets, notices, requests }
+  return { ...h, ...sheets, notices, requests, binaryRequests, revokedUrls }
 }
 
 const imageFile = (name) => ({ name, size: 120, type: 'image/png' })
@@ -148,6 +156,9 @@ test('KB image batch waits for each proofreading decision before processing the 
   h.ui.closeSheet()
   await batch
   assert.equal(h.KB.busy, false)
+  assert.equal(h.binaryRequests[0].headers['Content-Type'], 'application/octet-stream')
+  assert.equal(h.binaryRequests[0].body.name, 'first.png')
+  assert.deepEqual(h.revokedUrls, ['blob:ava-first.png', 'blob:ava-second.png'])
 })
 
 test('KB closing an OCR preview cancels the batch and a late response cannot replace a new sheet', async () => {
@@ -250,6 +261,7 @@ test('KB closing the panel invalidates an in-flight OCR preview', async () => {
   await batch
   assert.equal(h.current(), null)
   assert.equal(h.KB.busy, false)
+  assert.equal(h.binaryRequests[0].signal.aborted, true, 'closing cancels the network request as well as UI state')
 })
 
 test('KB distinguishes stored, partial and failed enhancement from completed summaries', () => {
@@ -627,13 +639,13 @@ test('assistant unexpected request failure releases its busy state and leaves a 
   assert.equal(h.controls.find((control) => control.attrs.type === 'submit').disabled, false)
 })
 
-test('KB blocks files above the actual 12 MB limit and permits the boundary size', async () => {
+test('KB blocks files above the server 100 MB limit and permits the boundary size', async () => {
   let uploads = 0
   const h = kbHarness({ kbUpload: async () => { uploads++; return { ok: true } } })
-  await h.uploadFiles([{ name: 'too-large.txt', size: 13 * 1024 * 1024, type: 'text/plain' }])
+  await h.uploadFiles([{ name: 'too-large.txt', size: 100 * 1024 * 1024 + 1, type: 'text/plain' }])
   assert.equal(uploads, 0)
-  assert.ok(h.notices.some((notice) => /12\s?MB/.test(notice.message)))
-  await h.uploadFiles([{ name: 'boundary.txt', size: 12 * 1024 * 1024, type: 'text/plain' }])
+  assert.ok(h.notices.some((notice) => /100\s?MB/.test(notice.message)))
+  await h.uploadFiles([{ name: 'boundary.txt', size: 100 * 1024 * 1024, type: 'text/plain' }])
   assert.equal(uploads, 1)
 })
 

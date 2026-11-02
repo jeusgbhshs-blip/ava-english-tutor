@@ -252,6 +252,8 @@ async function startServer({ sandbox, port, state }) {
       ...process.env,
       // 避免任何实现里的自动开浏览器逻辑
       AVA_NO_OPEN: '1',
+      // This suite serves its article fixtures on loopback; production defaults reject it.
+      AVA_ALLOW_PRIVATE_URL_IMPORT: '1',
       NO_OPEN: '1',
       BROWSER: 'none',
       // 清空继承的 env 覆盖，保证测试按 data/settings.json 与 PUT 行为走
@@ -2470,7 +2472,7 @@ async function main() {
           expectMatch(head.text, /get layered\(\)/, 'talking-head v2.0 应暴露只读 layered')
           expectMatch(head.text, /layers/, 'talking-head 应支持 layers 分层')
         })
-        await check('GET /mobile 与 /mobile.html 返回手机壳；旧版 / 保持不变', async () => {
+        await check('GET /mobile 与 /mobile.html 返回手机壳；安全入口保留旧版 / 模块', async () => {
           const mobile = await jfetch(api('/mobile'))
           expectStatus(mobile, 200, 'GET /mobile')
           expectMatch(mobile.headers.get('content-type') || '', /text\/html/i, '/mobile Content-Type')
@@ -2484,9 +2486,19 @@ async function main() {
           expectTrue(mobileHtml.text.includes('ptt-wave'), '/mobile.html 应包含 PTT 波形')
           expectTrue(!mobileHtml.text.includes('ptt-done'), '/mobile.html 不应再有 v2.2 的「完成」按钮 #ptt-done')
           expectTrue(mobileHtml.text.includes('talking-host'), '/mobile.html 应包含 talking-head 口播容器')
+          expectMatch(mobileHtml.text, /src=["']\.\/js\/native-bootstrap\.js\?entry=mobile["']/, '手机壳应通过安全入口加载 mobile 模块')
           const index = await jfetch(api('/'))
           expectStatus(index, 200, 'GET /（旧版）')
-          expectTrue(index.text.includes('main.js'), '旧版首页仍应加载原 main.js（不回归）')
+          // Both pages now authenticate before importing their original application module.
+          expectMatch(index.text, /src=["']\.\/js\/native-bootstrap\.js\?entry=settings["']/, '旧版首页应通过 settings 安全入口加载')
+          const bootstrap = await jfetch(api('/js/native-bootstrap.js'))
+          expectStatus(bootstrap, 200, 'GET /js/native-bootstrap.js')
+          expectMatch(bootstrap.text, /entry\s*===\s*['"]settings['"][^\n]*import\(['"]\.\/main\.js['"]\)/, 'settings 安全入口仍应加载原 main.js')
+          for (const entryPath of ['/js/main.js', '/js/mobile/app.js']) {
+            const entryModule = await jfetch(api(entryPath))
+            expectStatus(entryModule, 200, `GET ${entryPath}`)
+            expectMatch(entryModule.headers.get('content-type') || '', /javascript/i, `${entryPath} 应返回 JavaScript`)
+          }
         })
       } finally {
         await volcMock.close()
